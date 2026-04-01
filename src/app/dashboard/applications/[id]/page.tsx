@@ -73,21 +73,29 @@ export default async function ApplicationDetailPage({
 
           <p className="text-sm text-gray-700">{application.roleTitle}</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/dashboard/applications/${application.id}/edit`}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium"
+          >
+            Edit
+          </Link>
 
-        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-          <span className="rounded-full bg-gray-100 px-3 py-1">
-            {formatLabel(application.status)}
-          </span>
-
-          <span className="rounded-full bg-gray-100 px-3 py-1">
-            Priority: {formatLabel(application.priority)}
-          </span>
-
-          {application.workMode ? (
+          <div className="flex flex-wrap gap-2 text-xs text-gray-600">
             <span className="rounded-full bg-gray-100 px-3 py-1">
-              {formatLabel(application.workMode)}
+              {formatLabel(application.status)}
             </span>
-          ) : null}
+
+            <span className="rounded-full bg-gray-100 px-3 py-1">
+              Priority: {formatLabel(application.priority)}
+            </span>
+
+            {application.workMode ? (
+              <span className="rounded-full bg-gray-100 px-3 py-1">
+                {formatLabel(application.workMode)}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
