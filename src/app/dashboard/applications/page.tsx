@@ -67,9 +67,10 @@ export default async function ApplicationsPage() {
       ) : (
         <div className="grid gap-4">
           {applications.map((application) => (
-            <article
+            <Link
               key={application.id}
-              className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+              href={`/dashboard/applications/${application.id}`}
+              className="block rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow-md"
             >
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-2">
@@ -120,7 +121,7 @@ export default async function ApplicationsPage() {
                   Added {new Date(application.createdAt).toLocaleDateString()}
                 </div>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       )}
