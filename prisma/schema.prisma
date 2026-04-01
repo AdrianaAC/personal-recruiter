@@ -45,6 +45,7 @@ model JobApplication {
   tasks          Task[]
 
   @@index([userId])
+  @@index([userId, status])
 }
 
 model Interview {
