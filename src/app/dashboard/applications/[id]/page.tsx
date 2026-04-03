@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { ApplicationNotes } from "@/components/applications/application-notes";
 
 type ApplicationDetailPageProps = {
   params: Promise<{
@@ -256,24 +257,10 @@ export default async function ApplicationDetailPage({
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Recent Notes</h2>
-
-          {application.notes.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-600">No notes added yet.</p>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {application.notes.slice(0, 5).map((note) => (
-                <div key={note.id} className="rounded-lg bg-gray-50 p-4">
-                  <p className="text-sm font-medium text-gray-900">
-                    {note.title || "Untitled note"}
-                  </p>
-                  <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
-                    {note.content}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+          <ApplicationNotes
+            applicationId={application.id}
+            initialNotes={application.notes}
+          />
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
