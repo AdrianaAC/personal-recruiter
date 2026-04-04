@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ApplicationNotes } from "@/components/applications/application-notes";
+import { ApplicationTasks } from "@/components/applications/application-tasks";
 
 type ApplicationDetailPageProps = {
   params: Promise<{
@@ -230,28 +231,10 @@ export default async function ApplicationDetailPage({
             </div>
           </section>
 
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold">Tasks Preview</h2>
-
-            {application.tasks.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-600">
-                No tasks yet for this application.
-              </p>
-            ) : (
-              <div className="mt-3 space-y-3">
-                {application.tasks.slice(0, 3).map((task) => (
-                  <div key={task.id} className="rounded-lg bg-gray-50 p-3">
-                    <p className="text-sm font-medium text-gray-900">
-                      {task.title}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-600">
-                      {task.completed ? "Completed" : "Open"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+          <ApplicationTasks
+            applicationId={application.id}
+            initialTasks={application.tasks}
+          />
         </div>
       </section>
 
