@@ -14,6 +14,7 @@ export default async function ApplicationsPage() {
   const applications = await prisma.jobApplication.findMany({
     where: {
       userId: session.user.id,
+      archivedAt: null,
     },
     orderBy: {
       createdAt: "desc",

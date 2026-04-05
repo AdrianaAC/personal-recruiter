@@ -34,6 +34,7 @@ model JobApplication {
   jobDescription String?
   status         ApplicationStatus @default(SAVED)
   priority       Priority          @default(MEDIUM)
+  archivedAt     DateTime?
   appliedAt      DateTime?
   nextStep       String?
   notesSummary   String?
@@ -48,6 +49,7 @@ model JobApplication {
 
   @@index([userId])
   @@index([userId, status])
+  @@index([userId, archivedAt])
 }
 
 model Interview {

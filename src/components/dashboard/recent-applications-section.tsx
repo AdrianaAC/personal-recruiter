@@ -17,7 +17,7 @@ export function RecentApplicationsSection({
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50/80 p-6 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <h2 className="text-xl font-semibold">Recent Applications</h2>
@@ -30,14 +30,28 @@ export function RecentApplicationsSection({
           <label htmlFor="dashboard-application-search" className="sr-only">
             Search applications
           </label>
-          <input
-            id="dashboard-application-search"
-            type="text"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search applications..."
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-900"
-          />
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4 text-slate-400"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+            </svg>
+
+            <input
+              id="dashboard-application-search"
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search applications..."
+              className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+            />
+          </div>
         </div>
       </div>
 
@@ -50,6 +64,7 @@ export function RecentApplicationsSection({
         emptyActionLabel="Create first application"
         maxItems={5}
         searchQuery={deferredSearchQuery}
+        emphasizeDashboard
       />
     </section>
   );

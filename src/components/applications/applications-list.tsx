@@ -10,10 +10,12 @@ export type ApplicationListItem = {
   roleTitle: string;
   location?: string | null;
   workMode?: string | null;
+  nextStep?: string | null;
   status: string;
   priority: string;
   jobUrl?: string | null;
   createdAt: string | Date;
+  updatedAt?: string | Date;
 };
 
 type ApplicationsListProps = {
@@ -25,6 +27,7 @@ type ApplicationsListProps = {
   className?: string;
   maxItems?: number;
   searchQuery?: string;
+  emphasizeDashboard?: boolean;
   showSupplementalTags?: boolean;
   showJobPostAction?: boolean;
 };
@@ -72,6 +75,29 @@ function getStatusTagClass(status: string) {
       return "bg-slate-200 text-slate-900 ring-1 ring-slate-400";
     default:
       return "bg-gray-100 text-gray-700";
+  }
+}
+
+function getStatusAccentClass(status: string) {
+  switch (status) {
+    case "APPLIED":
+      return "bg-sky-400";
+    case "SCREENING":
+      return "bg-cyan-400";
+    case "TECHNICAL_INTERVIEW":
+      return "bg-fuchsia-400";
+    case "TAKE_HOME":
+      return "bg-amber-400";
+    case "FINAL_INTERVIEW":
+      return "bg-violet-400";
+    case "OFFER":
+      return "bg-emerald-400";
+    case "REJECTED":
+      return "bg-rose-400";
+    case "WITHDRAWN":
+      return "bg-slate-400";
+    default:
+      return "bg-gray-300";
   }
 }
 
@@ -145,8 +171,61 @@ function CopyIcon() {
   );
 }
 
-function actionKey(id: string, action: "copy" | "delete") {
+function ArchiveIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="h-4 w-4"
+    >
+      <path
+        d="M4 7.5h16"
+        strokeLinecap="round"
+      />
+      <path
+        d="M6 7.5h12v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-10Z"
+        strokeLinejoin="round"
+      />
+      <path d="M9 12h6" strokeLinecap="round" />
+      <path
+        d="M5 4.5h14a1 1 0 0 1 1 1v2H4v-2a1 1 0 0 1 1-1Z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function actionKey(id: string, action: "archive" | "copy" | "delete") {
   return `${id}:${action}`;
+}
+
+function getActivityCopy(application: ApplicationListItem) {
+  if (application.nextStep) {
+    return `Next up: ${application.nextStep}`;
+  }
+
+  switch (application.status) {
+    case "SAVED":
+      return "Next up: define your first outreach or application step.";
+    case "APPLIED":
+      return "Next up: set a follow-up reminder while you wait.";
+    case "SCREENING":
+    case "TECHNICAL_INTERVIEW":
+    case "TAKE_HOME":
+    case "FINAL_INTERVIEW":
+      return "Next up: keep prep notes, contacts, and follow-ups moving.";
+    case "OFFER":
+      return "Next up: capture offer details and your decision notes.";
+    case "REJECTED":
+      return "Next up: save takeaways for the next opportunity.";
+    case "WITHDRAWN":
+      return "Next up: keep the context for future applications.";
+    default:
+      return "Next up: keep the application moving forward.";
+  }
 }
 
 function matchesApplication(
@@ -162,6 +241,7 @@ function matchesApplication(
     application.roleTitle,
     application.location ?? "",
     application.workMode ? formatLabel(application.workMode) : "",
+    application.nextStep ?? "",
     application.status,
     formatLabel(application.status),
     application.priority,
@@ -184,6 +264,7 @@ export function ApplicationsList({
   className,
   maxItems,
   searchQuery,
+  emphasizeDashboard = false,
   showSupplementalTags = false,
   showJobPostAction = false,
 }: ApplicationsListProps) {
@@ -283,6 +364,46 @@ export function ApplicationsList({
     }
   }
 
+  async function handleArchive(application: ApplicationListItem) {
+    const confirmed = window.confirm(
+      `Archive ${application.companyName} - ${application.roleTitle}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const key = actionKey(application.id, "archive");
+    const previousApplications = applications;
+
+    setError(null);
+    setActiveAction(key);
+    setApplications((prev) => prev.filter((item) => item.id !== application.id));
+
+    try {
+      const response = await fetch(`/api/applications/${application.id}/archive`, {
+        method: "POST",
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to archive application.");
+      }
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err) {
+      setApplications(previousApplications);
+      setError(
+        err instanceof Error ? err.message : "Failed to archive application.",
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
   if (applications.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
@@ -318,14 +439,25 @@ export function ApplicationsList({
 
       {visibleApplications.map((application) => {
         const isDeleting = activeAction === actionKey(application.id, "delete");
+        const isArchiving = activeAction === actionKey(application.id, "archive");
         const isCopying = activeAction === actionKey(application.id, "copy");
-        const isBusy = isDeleting || isCopying;
+        const isBusy = isDeleting || isArchiving || isCopying;
 
         return (
           <div
             key={application.id}
-            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+            className={`${
+              emphasizeDashboard
+                ? "relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-white to-slate-50/70 p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                : "rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+            }`}
           >
+            {emphasizeDashboard ? (
+              <div
+                className={`absolute inset-y-4 left-0 w-1.5 rounded-r-full ${getStatusAccentClass(application.status)}`}
+              />
+            ) : null}
+
             <div className="grid gap-4 lg:grid-cols-3 lg:items-center lg:gap-6">
               <Link
                 href={`/dashboard/applications/${application.id}`}
@@ -335,6 +467,11 @@ export function ApplicationsList({
                   {application.companyName}
                 </h2>
                 <p className="text-sm text-gray-700">{application.roleTitle}</p>
+                {emphasizeDashboard ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    {getActivityCopy(application)}
+                  </p>
+                ) : null}
               </Link>
 
               <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 lg:justify-center">
@@ -398,6 +535,17 @@ export function ApplicationsList({
                 >
                   <PencilIcon />
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() => handleArchive(application)}
+                  disabled={isBusy}
+                  aria-label={`Archive ${application.companyName}`}
+                  title="Archive application"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ArchiveIcon />
+                </button>
 
                 <button
                   type="button"

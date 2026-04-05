@@ -14,6 +14,7 @@ export async function GET() {
     const applications = await prisma.jobApplication.findMany({
       where: {
         userId: session.user.id,
+        archivedAt: null,
       },
       orderBy: {
         createdAt: "desc",
