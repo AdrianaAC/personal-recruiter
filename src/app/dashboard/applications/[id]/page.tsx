@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ApplicationNotes } from "@/components/applications/application-notes";
 import { ApplicationTasks } from "@/components/applications/application-tasks";
+import { ApplicationInterviews } from "@/components/applications/application-interviews";
 
 type ApplicationDetailPageProps = {
   params: Promise<{
@@ -245,47 +246,10 @@ export default async function ApplicationDetailPage({
             initialNotes={application.notes}
           />
         </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Recent Interviews</h2>
-
-          {application.interviews.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-600">
-              No interviews recorded yet.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {application.interviews.slice(0, 5).map((interview) => (
-                <div key={interview.id} className="rounded-lg bg-gray-50 p-4">
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatLabel(interview.type)}
-                    {interview.stageName ? ` — ${interview.stageName}` : ""}
-                  </p>
-
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-                    {interview.outcome ? (
-                      <span className="rounded-full bg-white px-2 py-1">
-                        {formatLabel(interview.outcome)}
-                      </span>
-                    ) : null}
-
-                    {interview.scheduledAt ? (
-                      <span className="rounded-full bg-white px-2 py-1">
-                        {new Date(interview.scheduledAt).toLocaleString()}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {interview.notes ? (
-                    <p className="mt-3 text-sm text-gray-700 whitespace-pre-wrap">
-                      {interview.notes}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ApplicationInterviews
+          applicationId={application.id}
+          initialInterviews={application.interviews}
+        />
       </section>
     </div>
   );
