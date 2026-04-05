@@ -10,7 +10,7 @@ type InterviewItem = {
   id: string;
   applicationId: string;
   type: string;
-  stageName: string;
+  stageName: string | null;
   scheduledAt: string | Date | null;
   durationMinutes: number | null;
   interviewerName: string | null;

@@ -3,6 +3,14 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
+function formatLabel(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default async function ApplicationsPage() {
   const session = await auth();
 
@@ -67,44 +75,55 @@ export default async function ApplicationsPage() {
       ) : (
         <div className="grid gap-4">
           {applications.map((application) => (
-            <Link
+            <div
               key={application.id}
-              href={`/dashboard/applications/${application.id}`}
-              className="block rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+              className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-300 hover:shadow-md"
             >
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="space-y-2">
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      {application.companyName}
-                    </h2>
-                    <p className="text-sm text-gray-700">
-                      {application.roleTitle}
-                    </p>
-                  </div>
+                <Link
+                  href={`/dashboard/applications/${application.id}`}
+                  className="block min-w-0 flex-1"
+                >
+                  <div className="space-y-2">
+                    <div>
+                      <h2 className="text-lg font-semibold">
+                        {application.companyName}
+                      </h2>
+                      <p className="text-sm text-gray-700">
+                        {application.roleTitle}
+                      </p>
+                    </div>
 
-                  <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                    {application.location ? (
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                      {application.location ? (
+                        <span className="rounded-full bg-gray-100 px-2 py-1">
+                          {application.location}
+                        </span>
+                      ) : null}
+
+                      {application.workMode ? (
+                        <span className="rounded-full bg-gray-100 px-2 py-1">
+                          {formatLabel(application.workMode)}
+                        </span>
+                      ) : null}
+
                       <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {application.location}
+                        {formatLabel(application.status)}
                       </span>
-                    ) : null}
 
-                    {application.workMode ? (
                       <span className="rounded-full bg-gray-100 px-2 py-1">
-                        {application.workMode}
+                        Priority: {formatLabel(application.priority)}
                       </span>
-                    ) : null}
+                    </div>
 
-                    <span className="rounded-full bg-gray-100 px-2 py-1">
-                      {application.status}
-                    </span>
-
-                    <span className="rounded-full bg-gray-100 px-2 py-1">
-                      Priority: {application.priority}
-                    </span>
+                    <div className="text-xs text-gray-500">
+                      Added{" "}
+                      {new Date(application.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
+                </Link>
 
+                <div className="flex shrink-0 items-start gap-2">
                   {application.jobUrl ? (
                     <a
                       href={application.jobUrl}
@@ -115,13 +134,16 @@ export default async function ApplicationsPage() {
                       View job post
                     </a>
                   ) : null}
-                </div>
 
-                <div className="text-xs text-gray-500">
-                  Added {new Date(application.createdAt).toLocaleDateString()}
+                  <Link
+                    href={`/dashboard/applications/${application.id}`}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Open
+                  </Link>
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

@@ -2,14 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-
-function formatStatusLabel(value: string) {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
+import { RecentApplications } from "@/components/dashboard/recent-applications";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -127,59 +120,7 @@ export default async function DashboardPage() {
             View all
           </Link>
         </div>
-
-        {recentApplications.length === 0 ? (
-          <div className="mt-6 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-            <h3 className="text-lg font-medium">No applications yet</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              Start tracking your opportunities by creating your first
-              application.
-            </p>
-
-            <Link
-              href="/dashboard/applications/new"
-              className="mt-4 inline-flex rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
-            >
-              Create first application
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-6 grid gap-4">
-            {recentApplications.map((application) => (
-              <Link
-                key={application.id}
-                href={`/dashboard/applications/${application.id}`}
-                className="block rounded-xl border border-gray-200 p-4 transition hover:border-gray-300 hover:shadow-sm"
-              >
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">
-                      {application.companyName}
-                    </h3>
-                    <p className="text-sm text-gray-700">
-                      {application.roleTitle}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                    <span className="rounded-full bg-gray-100 px-2 py-1">
-                      {formatStatusLabel(application.status)}
-                    </span>
-
-                    <span className="rounded-full bg-gray-100 px-2 py-1">
-                      Priority: {formatStatusLabel(application.priority)}
-                    </span>
-
-                    <span className="rounded-full bg-gray-100 px-2 py-1">
-                      Added{" "}
-                      {new Date(application.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+        <RecentApplications initialApplications={recentApplications} />
       </section>
     </div>
   );
