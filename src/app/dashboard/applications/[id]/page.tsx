@@ -2,6 +2,13 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { ApplicationNotes } from "@/components/applications/application-notes";
+import { ApplicationTasks } from "@/components/applications/application-tasks";
+import { ApplicationInterviews } from "@/components/applications/application-interviews";
+import { ApplicationSummaryCards } from "@/components/applications/application-summary-cards";
+import { ApplicationNextInterview } from "@/components/applications/application-next-interview";
+import { ApplicationActivityTimeline } from "@/components/applications/application-activity-timeline";
+import { ApplicationContacts } from "@/components/applications/application-contacts";
 
 type ApplicationDetailPageProps = {
   params: Promise<{
@@ -34,6 +41,14 @@ export default async function ApplicationDetailPage({
       userId: session.user.id,
     },
     include: {
+      contacts: {
+        include: {
+          contact: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
       interviews: {
         orderBy: {
           createdAt: "desc",
@@ -56,6 +71,81 @@ export default async function ApplicationDetailPage({
     notFound();
   }
 
+  const openTasksCount = application.tasks.filter(
+    (task) => !task.completed,
+  ).length;
+
+  const completedTasksCount = application.tasks.filter(
+    (task) => task.completed,
+  ).length;
+
+  const nextInterview =
+    application.interviews
+      .filter((i) => i.scheduledAt)
+      .sort(
+        (a, b) =>
+          new Date(a.scheduledAt as Date).getTime() -
+          new Date(b.scheduledAt as Date).getTime(),
+      )[0] ?? null;
+
+  const timelineItems = [
+    {
+      id: `application-created-${application.id}`,
+      kind: "application" as const,
+      title: "Application saved",
+      description: `${application.companyName} — ${application.roleTitle}`,
+      timestamp: application.createdAt,
+      meta: formatLabel(application.status),
+    },
+
+    ...application.notes.map((note) => ({
+      id: `note-${note.id}`,
+      kind: "note" as const,
+      title: "Note added",
+      description: note.content || "No content",
+      timestamp: note.createdAt,
+      meta: null,
+    })),
+
+    ...application.tasks.map((task) => ({
+      id: `task-${task.id}`,
+      kind: "task" as const,
+      title: task.completed ? "Task completed" : "Task created",
+      description: task.title,
+      timestamp: task.updatedAt ?? task.createdAt,
+      meta: task.completed ? "Completed" : "Open",
+    })),
+
+    ...application.interviews.map((interview) => ({
+      id: `interview-${interview.id}`,
+      kind: "interview" as const,
+      title: interview.stageName || "Interview activity",
+      description:
+        interview.notes || interview.locationOrLink || "Interview recorded",
+      timestamp: interview.updatedAt ?? interview.createdAt,
+      meta: interview.type,
+    })),
+
+    ...application.contacts.map((applicationContact) => ({
+      id: `contact-${applicationContact.id}`,
+      kind: "application" as const,
+      title: "Contact attached",
+      description: `${applicationContact.contact.fullName}${
+        applicationContact.contact.jobTitle
+          ? ` — ${applicationContact.contact.jobTitle}`
+          : ""
+      }${
+        applicationContact.contact.companyName
+          ? ` • ${applicationContact.contact.companyName}`
+          : ""
+      }`,
+      timestamp: applicationContact.createdAt,
+      meta: formatLabel(applicationContact.role),
+    })),
+  ].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -73,6 +163,7 @@ export default async function ApplicationDetailPage({
 
           <p className="text-sm text-gray-700">{application.roleTitle}</p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/dashboard/applications/${application.id}/edit`}
@@ -98,6 +189,24 @@ export default async function ApplicationDetailPage({
           </div>
         </div>
       </div>
+
+      <ApplicationSummaryCards
+        status={application.status}
+        notesCount={application.notes.length}
+        openTasksCount={openTasksCount}
+        completedTasksCount={completedTasksCount}
+        interviewsCount={application.interviews.length}
+        nextInterviewAt={nextInterview?.scheduledAt ?? null}
+      />
+
+      <ApplicationNextInterview interview={nextInterview} />
+
+      <ApplicationActivityTimeline items={timelineItems} />
+
+      <ApplicationContacts
+        applicationId={application.id}
+        initialContacts={application.contacts}
+      />
 
       <section className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
@@ -181,7 +290,7 @@ export default async function ApplicationDetailPage({
             <h3 className="text-sm font-medium text-gray-500">
               Job Description
             </h3>
-            <div className="mt-2 rounded-lg bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
+            <div className="mt-2 whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm text-gray-800">
               {application.jobDescription || "No job description saved yet."}
             </div>
           </div>
@@ -195,127 +304,32 @@ export default async function ApplicationDetailPage({
 
           <div className="mt-6">
             <h3 className="text-sm font-medium text-gray-500">Notes Summary</h3>
-            <div className="mt-2 rounded-lg bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
+            <div className="mt-2 whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm text-gray-800">
               {application.notesSummary || "No summary yet."}
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold">Quick Stats</h2>
-
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-lg bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">Interviews</p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {application.interviews.length}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">Notes</p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {application.notes.length}
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-gray-50 p-4">
-                <p className="text-xs text-gray-500">Tasks</p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {application.tasks.length}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold">Tasks Preview</h2>
-
-            {application.tasks.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-600">
-                No tasks yet for this application.
-              </p>
-            ) : (
-              <div className="mt-3 space-y-3">
-                {application.tasks.slice(0, 3).map((task) => (
-                  <div key={task.id} className="rounded-lg bg-gray-50 p-3">
-                    <p className="text-sm font-medium text-gray-900">
-                      {task.title}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-600">
-                      {task.completed ? "Completed" : "Open"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+          <ApplicationTasks
+            applicationId={application.id}
+            initialTasks={application.tasks}
+          />
         </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Recent Notes</h2>
-
-          {application.notes.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-600">No notes added yet.</p>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {application.notes.slice(0, 5).map((note) => (
-                <div key={note.id} className="rounded-lg bg-gray-50 p-4">
-                  <p className="text-sm font-medium text-gray-900">
-                    {note.title || "Untitled note"}
-                  </p>
-                  <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
-                    {note.content}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+          <ApplicationNotes
+            applicationId={application.id}
+            initialNotes={application.notes}
+          />
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Recent Interviews</h2>
-
-          {application.interviews.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-600">
-              No interviews recorded yet.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {application.interviews.slice(0, 5).map((interview) => (
-                <div key={interview.id} className="rounded-lg bg-gray-50 p-4">
-                  <p className="text-sm font-medium text-gray-900">
-                    {formatLabel(interview.type)}
-                    {interview.stageName ? ` — ${interview.stageName}` : ""}
-                  </p>
-
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-                    {interview.outcome ? (
-                      <span className="rounded-full bg-white px-2 py-1">
-                        {formatLabel(interview.outcome)}
-                      </span>
-                    ) : null}
-
-                    {interview.scheduledAt ? (
-                      <span className="rounded-full bg-white px-2 py-1">
-                        {new Date(interview.scheduledAt).toLocaleString()}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {interview.notes ? (
-                    <p className="mt-3 text-sm text-gray-700 whitespace-pre-wrap">
-                      {interview.notes}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ApplicationInterviews
+          applicationId={application.id}
+          initialInterviews={application.interviews}
+        />
       </section>
     </div>
   );
