@@ -66,30 +66,80 @@ export async function POST(request: Request) {
 
     const data = parsed.data;
 
-    const application = await prisma.jobApplication.create({
-      data: {
-        userId: session.user.id,
-        companyName: data.companyName,
-        roleTitle: data.roleTitle,
-        location: data.location || null,
-        workMode: data.workMode ?? null,
-        jobUrl: data.jobUrl || null,
-        jobDescription: data.jobDescription || null,
-        status: data.status,
-        priority: data.priority,
-      },
-      select: {
-        id: true,
-        companyName: true,
-        roleTitle: true,
-        location: true,
-        workMode: true,
-        status: true,
-        priority: true,
-        jobUrl: true,
-        jobDescription: true,
-        createdAt: true,
-      },
+    const application = await prisma.$transaction(async (tx) => {
+      const createdApplication = await tx.jobApplication.create({
+        data: {
+          userId: session.user.id,
+          companyName: data.companyName,
+          roleTitle: data.roleTitle,
+          location: data.location || null,
+          workMode: data.workMode ?? null,
+          jobUrl: data.jobUrl || null,
+          jobDescription: data.jobDescription || null,
+          status: data.status,
+          priority: data.priority,
+        },
+        select: {
+          id: true,
+          companyName: true,
+          roleTitle: true,
+          location: true,
+          workMode: true,
+          status: true,
+          priority: true,
+          jobUrl: true,
+          jobDescription: true,
+          createdAt: true,
+        },
+      });
+
+      if (data.applicationNotes) {
+        await tx.note.create({
+          data: {
+            applicationId: createdApplication.id,
+            title: "Initial notes",
+            content: data.applicationNotes,
+          },
+        });
+      }
+
+      if (data.contactName) {
+        const existingContact = await tx.contact.findFirst({
+          where: {
+            userId: session.user.id,
+            fullName: data.contactName,
+            companyName: data.companyName,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        const contactId =
+          existingContact?.id ??
+          (
+            await tx.contact.create({
+              data: {
+                userId: session.user.id,
+                fullName: data.contactName,
+                companyName: data.companyName,
+              },
+              select: {
+                id: true,
+              },
+            })
+          ).id;
+
+        await tx.applicationContact.create({
+          data: {
+            applicationId: createdApplication.id,
+            contactId,
+            role: "OTHER",
+          },
+        });
+      }
+
+      return createdApplication;
     });
 
     return NextResponse.json(application, { status: 201 });

@@ -13,8 +13,10 @@ type FormState = {
   roleTitle: string;
   location: string;
   workMode: "" | "REMOTE" | "HYBRID" | "ONSITE";
+  contactName: string;
   jobUrl: string;
   jobDescription: string;
+  applicationNotes: string;
   status:
     | "SAVED"
     | "APPLIED"
@@ -33,8 +35,10 @@ const initialState: FormState = {
   roleTitle: "",
   location: "",
   workMode: "",
+  contactName: "",
   jobUrl: "",
   jobDescription: "",
+  applicationNotes: "",
   status: "SAVED",
   priority: "MEDIUM",
 };
@@ -69,8 +73,10 @@ export function ApplicationForm() {
           roleTitle: form.roleTitle,
           location: form.location,
           workMode: form.workMode || null,
+          contactName: form.contactName,
           jobUrl: form.jobUrl,
           jobDescription: form.jobDescription,
+          applicationNotes: form.applicationNotes,
           status: form.status,
           priority: form.priority,
         }),
@@ -165,6 +171,20 @@ export function ApplicationForm() {
         </div>
 
         <div className="space-y-2 md:col-span-2">
+          <label htmlFor="contactName" className="text-sm font-medium">
+            Primary Contact
+          </label>
+          <input
+            id="contactName"
+            type="text"
+            value={form.contactName}
+            onChange={(e) => updateField("contactName", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            placeholder="e.g. Jane Doe"
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
           <label htmlFor="jobUrl" className="text-sm font-medium">
             Job URL
           </label>
@@ -227,7 +247,20 @@ export function ApplicationForm() {
             value={form.jobDescription}
             onChange={(e) => updateField("jobDescription", e.target.value)}
             className="min-h-[180px] w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-            placeholder="Paste the job description or your notes here..."
+            placeholder="Paste the job description here..."
+          />
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <label htmlFor="applicationNotes" className="text-sm font-medium">
+            Application Notes
+          </label>
+          <textarea
+            id="applicationNotes"
+            value={form.applicationNotes}
+            onChange={(e) => updateField("applicationNotes", e.target.value)}
+            className="min-h-[160px] w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            placeholder="Capture recruiter context, interview prep, follow-ups, or anything else you want to build on later..."
           />
         </div>
       </div>

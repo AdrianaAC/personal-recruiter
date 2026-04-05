@@ -51,6 +51,20 @@ export const createApplicationSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  contactName: z
+    .string()
+    .trim()
+    .max(100, "Contact name must be 100 characters or less")
+    .optional()
+    .or(z.literal("")),
+
+  applicationNotes: z
+    .string()
+    .trim()
+    .max(5000, "Notes must be 5000 characters or less")
+    .optional()
+    .or(z.literal("")),
+
   status: z.enum(applicationStatusValues).default("SAVED"),
 
   priority: z.enum(priorityValues).default("MEDIUM"),

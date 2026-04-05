@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { RecentApplications } from "@/components/dashboard/recent-applications";
+import { RecentApplicationsSection } from "@/components/dashboard/recent-applications-section";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -48,8 +48,6 @@ export default async function DashboardPage() {
   const offersCount = applications.filter(
     (application) => application.status === "OFFER",
   ).length;
-
-  const recentApplications = applications.slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -104,24 +102,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">Recent Applications</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Your latest opportunities at a glance.
-            </p>
-          </div>
-
-          <Link
-            href="/dashboard/applications"
-            className="text-sm font-medium text-blue-600 underline"
-          >
-            View all
-          </Link>
-        </div>
-        <RecentApplications initialApplications={recentApplications} />
-      </section>
+      <RecentApplicationsSection applications={applications} />
     </div>
   );
 }

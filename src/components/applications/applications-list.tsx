@@ -1,0 +1,419 @@
+"use client";
+
+import { startTransition, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+export type ApplicationListItem = {
+  id: string;
+  companyName: string;
+  roleTitle: string;
+  location?: string | null;
+  workMode?: string | null;
+  status: string;
+  priority: string;
+  jobUrl?: string | null;
+  createdAt: string | Date;
+};
+
+type ApplicationsListProps = {
+  initialApplications: ApplicationListItem[];
+  emptyTitle: string;
+  emptyDescription: string;
+  emptyActionHref: string;
+  emptyActionLabel: string;
+  className?: string;
+  maxItems?: number;
+  searchQuery?: string;
+  showSupplementalTags?: boolean;
+  showJobPostAction?: boolean;
+};
+
+function formatLabel(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getPriorityTagClass(priority: string) {
+  switch (priority) {
+    case "HIGH":
+      return "bg-red-50 text-red-700 ring-1 ring-red-200";
+    case "MEDIUM":
+      return "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+    case "LOW":
+      return "bg-green-50 text-green-700 ring-1 ring-green-200";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+}
+
+function getStatusTagClass(status: string) {
+  switch (status) {
+    case "SAVED":
+      return "bg-white text-gray-700 ring-1 ring-gray-300";
+    case "APPLIED":
+      return "bg-sky-100 text-sky-900 ring-1 ring-sky-300";
+    case "SCREENING":
+      return "bg-cyan-100 text-cyan-900 ring-1 ring-cyan-300";
+    case "TECHNICAL_INTERVIEW":
+      return "bg-fuchsia-100 text-fuchsia-900 ring-1 ring-fuchsia-300";
+    case "TAKE_HOME":
+      return "bg-amber-100 text-amber-900 ring-1 ring-amber-300";
+    case "FINAL_INTERVIEW":
+      return "bg-violet-100 text-violet-900 ring-1 ring-violet-300";
+    case "OFFER":
+      return "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300";
+    case "REJECTED":
+      return "bg-rose-100 text-rose-900 ring-1 ring-rose-300";
+    case "WITHDRAWN":
+      return "bg-slate-200 text-slate-900 ring-1 ring-slate-400";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="h-4 w-4"
+    >
+      <path d="M4 7h16" strokeLinecap="round" />
+      <path d="M10 11v6" strokeLinecap="round" />
+      <path d="M14 11v6" strokeLinecap="round" />
+      <path
+        d="M6 7l1 11a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-11"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="h-4 w-4"
+    >
+      <path
+        d="M4 20l4.5-1 9-9a2.1 2.1 0 0 0-3-3l-9 9L4 20Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M13.5 6.5l4 4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CopyIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="h-4 w-4"
+    >
+      <rect
+        x="9"
+        y="9"
+        width="10"
+        height="10"
+        rx="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15 9V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function actionKey(id: string, action: "copy" | "delete") {
+  return `${id}:${action}`;
+}
+
+function matchesApplication(
+  application: ApplicationListItem,
+  normalizedQuery: string,
+) {
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  const searchableFields = [
+    application.companyName,
+    application.roleTitle,
+    application.location ?? "",
+    application.workMode ? formatLabel(application.workMode) : "",
+    application.status,
+    formatLabel(application.status),
+    application.priority,
+    formatLabel(application.priority),
+    application.jobUrl ?? "",
+    new Date(application.createdAt).toLocaleDateString(),
+  ];
+
+  return searchableFields.some((field) =>
+    field.toLowerCase().includes(normalizedQuery),
+  );
+}
+
+export function ApplicationsList({
+  initialApplications,
+  emptyTitle,
+  emptyDescription,
+  emptyActionHref,
+  emptyActionLabel,
+  className,
+  maxItems,
+  searchQuery,
+  showSupplementalTags = false,
+  showJobPostAction = false,
+}: ApplicationsListProps) {
+  const router = useRouter();
+  const [applications, setApplications] =
+    useState<ApplicationListItem[]>(initialApplications);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const normalizedQuery = searchQuery?.trim().toLowerCase() ?? "";
+
+  const visibleApplications = useMemo(() => {
+    const filtered = applications.filter((application) =>
+      matchesApplication(application, normalizedQuery),
+    );
+
+    if (!normalizedQuery && typeof maxItems === "number") {
+      return filtered.slice(0, maxItems);
+    }
+
+    return filtered;
+  }, [applications, maxItems, normalizedQuery]);
+
+  async function handleDelete(application: ApplicationListItem) {
+    const confirmed = window.confirm(
+      `Delete ${application.companyName} - ${application.roleTitle}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const key = actionKey(application.id, "delete");
+    const previousApplications = applications;
+
+    setError(null);
+    setActiveAction(key);
+    setApplications((prev) => prev.filter((item) => item.id !== application.id));
+
+    try {
+      const response = await fetch(`/api/applications/${application.id}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to delete application.");
+      }
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err) {
+      setApplications(previousApplications);
+      setError(
+        err instanceof Error ? err.message : "Failed to delete application.",
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  async function handleCopy(application: ApplicationListItem) {
+    const key = actionKey(application.id, "copy");
+
+    setError(null);
+    setActiveAction(key);
+
+    try {
+      const response = await fetch(
+        `/api/applications/${application.id}/duplicate`,
+        {
+          method: "POST",
+        },
+      );
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to duplicate application.");
+      }
+
+      setApplications((prev) => {
+        const next = [result, ...prev];
+        return typeof maxItems === "number" ? next.slice(0, maxItems) : next;
+      });
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to duplicate application.",
+      );
+    } finally {
+      setActiveAction(null);
+    }
+  }
+
+  if (applications.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
+        <h2 className="text-lg font-medium">{emptyTitle}</h2>
+        <p className="mt-2 text-sm text-gray-600">{emptyDescription}</p>
+
+        <Link
+          href={emptyActionHref}
+          className="mt-4 inline-flex rounded-lg bg-black px-4 py-2 text-sm font-medium text-white"
+        >
+          {emptyActionLabel}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className={className ?? "space-y-4"}>
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {visibleApplications.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+          <h3 className="text-lg font-medium">No matching applications</h3>
+          <p className="mt-2 text-sm text-gray-600">
+            Try a different keyword to find the application you want.
+          </p>
+        </div>
+      ) : null}
+
+      {visibleApplications.map((application) => {
+        const isDeleting = activeAction === actionKey(application.id, "delete");
+        const isCopying = activeAction === actionKey(application.id, "copy");
+        const isBusy = isDeleting || isCopying;
+
+        return (
+          <div
+            key={application.id}
+            className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+          >
+            <div className="grid gap-4 lg:grid-cols-3 lg:items-center lg:gap-6">
+              <Link
+                href={`/dashboard/applications/${application.id}`}
+                className="min-w-0 lg:justify-self-start"
+              >
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {application.companyName}
+                </h2>
+                <p className="text-sm text-gray-700">{application.roleTitle}</p>
+              </Link>
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 lg:justify-center">
+                {showSupplementalTags && application.location ? (
+                  <span className="rounded-full bg-white px-2 py-1 text-gray-700 ring-1 ring-gray-300">
+                    {application.location}
+                  </span>
+                ) : null}
+
+                {showSupplementalTags && application.workMode ? (
+                  <span className="rounded-full bg-white px-2 py-1 text-gray-700 ring-1 ring-gray-300">
+                    {formatLabel(application.workMode)}
+                  </span>
+                ) : null}
+
+                <span
+                  className={`rounded-full px-2 py-1 ${getStatusTagClass(application.status)}`}
+                >
+                  {formatLabel(application.status)}
+                </span>
+
+                <span
+                  className={`rounded-full px-2 py-1 ${getPriorityTagClass(application.priority)}`}
+                >
+                  Priority: {formatLabel(application.priority)}
+                </span>
+
+                <span className="rounded-full bg-white px-2 py-1 text-black ring-1 ring-black/20">
+                  Added {new Date(application.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                {showJobPostAction && application.jobUrl ? (
+                  <a
+                    href={application.jobUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center justify-center rounded-full border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    Job post
+                  </a>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => handleDelete(application)}
+                  disabled={isBusy}
+                  aria-label={`Delete ${application.companyName}`}
+                  title="Delete application"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <TrashIcon />
+                </button>
+
+                <Link
+                  href={`/dashboard/applications/${application.id}/edit`}
+                  aria-label={`Edit ${application.companyName}`}
+                  title="Edit application"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
+                >
+                  <PencilIcon />
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => handleCopy(application)}
+                  disabled={isBusy}
+                  aria-label={`Duplicate ${application.companyName}`}
+                  title="Duplicate application"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-gray-400 hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <CopyIcon />
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
