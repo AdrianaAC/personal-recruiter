@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type RecentTask = {
   id: string;
@@ -10,7 +14,7 @@ type RecentTask = {
     id: string;
     companyName: string;
     roleTitle: string;
-  };
+  } | null;
 };
 
 type RecentTasksSectionProps = {
@@ -32,12 +36,17 @@ function getDueDateTagClass(value: string | Date | null) {
 
   const dueDate = new Date(value);
   const today = new Date();
-  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const dayStart = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
   const dueStart = new Date(
     dueDate.getFullYear(),
     dueDate.getMonth(),
     dueDate.getDate(),
   );
+
   const diffDays = Math.round(
     (dueStart.getTime() - dayStart.getTime()) / (1000 * 60 * 60 * 24),
   );
@@ -51,6 +60,47 @@ function getDueDateTagClass(value: string | Date | null) {
   }
 
   return "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300";
+}
+
+function TaskActions({ taskId }: { taskId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function markComplete() {
+    setLoading(true);
+
+    const res = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+    });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      alert("Failed to update task.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <details className="relative">
+      <summary className="list-none cursor-pointer rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+        {loading ? "Updating..." : "Actions"}
+      </summary>
+
+      <div className="absolute right-0 z-10 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+        <button
+          type="button"
+          onClick={markComplete}
+          disabled={loading}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+        >
+          Mark as complete
+        </button>
+      </div>
+    </details>
+  );
 }
 
 export function RecentTasksSection({ tasks }: RecentTasksSectionProps) {
@@ -73,7 +123,7 @@ export function RecentTasksSection({ tasks }: RecentTasksSectionProps) {
         <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center">
           <h3 className="text-lg font-medium text-slate-900">No open tasks</h3>
           <p className="mt-2 text-sm text-slate-600">
-            Add tasks to your applications to keep follow-ups and prep visible.
+            Add tasks from the dashboard or attach them to applications.
           </p>
         </div>
       ) : (
@@ -89,16 +139,13 @@ export function RecentTasksSection({ tasks }: RecentTasksSectionProps) {
                     <h3 className="text-base font-semibold text-slate-900">
                       {task.title}
                     </h3>
+
                     <p className="mt-1 text-sm text-slate-600">
-                      {task.application.companyName} • {task.application.roleTitle}
+                      Due {formatDate(task.dueDate)}
                     </p>
                   </div>
 
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${getDueDateTagClass(task.dueDate)}`}
-                  >
-                    Due {formatDate(task.dueDate)}
-                  </span>
+                  <TaskActions taskId={task.id} />
                 </div>
 
                 {task.description ? (
@@ -107,15 +154,23 @@ export function RecentTasksSection({ tasks }: RecentTasksSectionProps) {
 
                 <div className="flex items-center justify-between gap-4">
                   <p className="text-xs text-slate-500">
-                    Updated {formatDate(task.updatedAt)}
+                    {task.application
+                      ? `${task.application.companyName} • ${task.application.roleTitle}`
+                      : "Standalone task"}
                   </p>
 
-                  <Link
-                    href={`/dashboard/applications/${task.application.id}`}
-                    className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Open application
-                  </Link>
+                  {task.application ? (
+                    <Link
+                      href={`/dashboard/applications/${task.application.id}`}
+                      className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Open application
+                    </Link>
+                  ) : (
+                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
+                      General task
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,21 +1,29 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 type RecentCallUp = {
   id: string;
-  role: string;
+  title: string;
+  notes: string | null;
+  scheduledAt: string | Date | null;
+  status: "PLANNED" | "DONE" | "MISSED";
   updatedAt: string | Date;
   contact: {
+    id: string;
     fullName: string;
     email: string | null;
     linkedinUrl: string | null;
     companyName: string | null;
     jobTitle: string | null;
-  };
+  } | null;
   application: {
     id: string;
     companyName: string;
     roleTitle: string;
-  };
+  } | null;
 };
 
 type RecentCallUpsSectionProps = {
@@ -30,8 +38,65 @@ function formatLabel(value: string) {
     .join(" ");
 }
 
-function formatDate(value: string | Date) {
+function formatDate(value: string | Date | null) {
+  if (!value) {
+    return "No date";
+  }
+
   return new Date(value).toLocaleDateString();
+}
+
+function CallUpActions({ callUpId }: { callUpId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  async function markComplete() {
+    setLoading(true);
+
+    const res = await fetch(`/api/call-ups/${callUpId}`, {
+      method: "PATCH",
+    });
+
+    setLoading(false);
+
+    if (!res.ok) {
+      alert("Failed to update call-up.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <details className="relative">
+      <summary className="list-none cursor-pointer rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+        {loading ? "Updating..." : "Actions"}
+      </summary>
+
+      <div className="absolute right-0 z-10 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+        <button
+          type="button"
+          onClick={markComplete}
+          disabled={loading}
+          className="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+        >
+          Mark as complete
+        </button>
+      </div>
+    </details>
+  );
+}
+
+function getStatusClass(status: RecentCallUp["status"]) {
+  if (status === "DONE") {
+    return "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300";
+  }
+
+  if (status === "MISSED") {
+    return "bg-rose-100 text-rose-900 ring-1 ring-rose-300";
+  }
+
+  return "bg-sky-100 text-sky-900 ring-1 ring-sky-300";
 }
 
 export function RecentCallUpsSection({
@@ -60,8 +125,7 @@ export function RecentCallUpsSection({
             No call-ups yet
           </h3>
           <p className="mt-2 text-sm text-slate-600">
-            Attach contacts to applications so the people around each role stay
-            visible.
+            Add call-ups from the dashboard and attach them to a real contact.
           </p>
         </div>
       ) : (
@@ -75,35 +139,56 @@ export function RecentCallUpsSection({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-base font-semibold text-slate-900">
-                      {callUp.contact.fullName}
+                      {callUp.title}
                     </h3>
+
                     <p className="mt-1 text-sm text-slate-600">
-                      {callUp.contact.jobTitle || formatLabel(callUp.role)}
-                      {callUp.contact.companyName
-                        ? ` • ${callUp.contact.companyName}`
-                        : ""}
+                      {callUp.scheduledAt
+                        ? `Scheduled ${formatDate(callUp.scheduledAt)}`
+                        : "No scheduled date"}
                     </p>
                   </div>
 
-                  <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-medium text-sky-900 ring-1 ring-sky-300">
-                    {formatLabel(callUp.role)}
-                  </span>
+                  <CallUpActions callUpId={callUp.id} />
                 </div>
 
+                <p className="text-sm text-slate-600">
+                  {callUp.contact?.fullName ?? "Unknown contact"}
+                  {callUp.contact?.jobTitle ? ` • ${callUp.contact.jobTitle}` : ""}
+                  {callUp.contact?.companyName
+                    ? ` • ${callUp.contact.companyName}`
+                    : ""}
+                </p>
+
+                {callUp.notes ? (
+                  <p className="text-sm text-slate-600">{callUp.notes}</p>
+                ) : null}
+
                 <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-300">
-                    {callUp.application.companyName}
+                  <span
+                    className={`rounded-full px-2.5 py-1 font-medium ${getStatusClass(callUp.status)}`}
+                  >
+                    {formatLabel(callUp.status)}
                   </span>
-                  <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-300">
-                    {callUp.application.roleTitle}
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-black ring-1 ring-black/20">
-                    Updated {formatDate(callUp.updatedAt)}
-                  </span>
+
+                  {callUp.application ? (
+                    <>
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-300">
+                        {callUp.application.companyName}
+                      </span>
+                      <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-300">
+                        {callUp.application.roleTitle}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="rounded-full bg-white px-2.5 py-1 ring-1 ring-slate-300">
+                      Standalone call-up
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {callUp.contact.email ? (
+                  {callUp.contact?.email ? (
                     <a
                       href={`mailto:${callUp.contact.email}`}
                       className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
@@ -112,7 +197,7 @@ export function RecentCallUpsSection({
                     </a>
                   ) : null}
 
-                  {callUp.contact.linkedinUrl ? (
+                  {callUp.contact?.linkedinUrl ? (
                     <a
                       href={callUp.contact.linkedinUrl}
                       target="_blank"
@@ -123,12 +208,18 @@ export function RecentCallUpsSection({
                     </a>
                   ) : null}
 
-                  <Link
-                    href={`/dashboard/applications/${callUp.application.id}`}
-                    className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Open application
-                  </Link>
+                  {callUp.application ? (
+                    <Link
+                      href={`/dashboard/applications/${callUp.application.id}`}
+                      className="inline-flex rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Open application
+                    </Link>
+                  ) : (
+                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500">
+                      General call-up
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

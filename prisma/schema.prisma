@@ -17,6 +17,8 @@ model User {
   updatedAt    DateTime         @updatedAt
   applications JobApplication[]
   contacts     Contact[]
+  tasks        Task[]
+  callUps      CallUp[]
 }
 
 model JobApplication {
@@ -46,6 +48,7 @@ model JobApplication {
   notes      Note[]
   tasks      Task[]
   contacts   ApplicationContact[]
+  callUps    CallUp[]
 
   @@index([userId])
   @@index([userId, status])
@@ -87,16 +90,20 @@ model Note {
 
 model Task {
   id            String    @id @default(cuid())
-  applicationId String
+  userId        String
+  applicationId String?
   title         String
   description   String?
   dueDate       DateTime?
   completed     Boolean   @default(false)
+  archivedAt    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application JobApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@index([applicationId])
 }
 
@@ -115,10 +122,33 @@ model Contact {
 
   user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   applications ApplicationContact[]
+  callUps      CallUp[]
 
   @@index([userId])
   @@index([companyName])
   @@index([fullName])
+}
+
+model CallUp {
+  id            String       @id @default(cuid())
+  userId        String
+  applicationId String?
+  contactId     String?
+  title         String
+  notes         String?
+  scheduledAt   DateTime?
+  status        CallUpStatus @default(PLANNED)
+  archivedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application JobApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  contact     Contact?        @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([applicationId])
+  @@index([contactId])
 }
 
 model ApplicationContact {
@@ -186,4 +216,10 @@ enum ApplicationContactRole {
   REFERRAL
   COORDINATOR
   OTHER
+}
+
+enum CallUpStatus {
+  PLANNED
+  DONE
+  MISSED
 }

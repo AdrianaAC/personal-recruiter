@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { RecentApplicationsSection } from "@/components/dashboard/recent-applications-section";
 import { RecentTasksSection } from "@/components/dashboard/recent-tasks-section";
 import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-section";
+import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 
 function BriefcaseIcon() {
   return (
@@ -94,6 +95,7 @@ export default async function DashboardPage() {
 
   const [
     applications,
+    contacts,
     openTasksCount,
     callUpsCount,
     recentTasks,
@@ -118,30 +120,41 @@ export default async function DashboardPage() {
         updatedAt: true,
       },
     }),
-    prisma.task.count({
+    prisma.contact.findMany({
       where: {
-        completed: false,
-        application: {
-          userId: session.user.id,
-          archivedAt: null,
-        },
+        userId: session.user.id,
+      },
+      orderBy: {
+        fullName: "asc",
+      },
+      select: {
+        id: true,
+        fullName: true,
+        companyName: true,
+        jobTitle: true,
       },
     }),
-    prisma.applicationContact.count({
+    prisma.task.count({
       where: {
-        application: {
-          userId: session.user.id,
-          archivedAt: null,
+        userId: session.user.id,
+        completed: false,
+        archivedAt: null,
+      },
+    }),
+    prisma.callUp.count({
+      where: {
+        userId: session.user.id,
+        archivedAt: null,
+        contactId: {
+          not: null,
         },
       },
     }),
     prisma.task.findMany({
       where: {
+        userId: session.user.id,
         completed: false,
-        application: {
-          userId: session.user.id,
-          archivedAt: null,
-        },
+        archivedAt: null,
       },
       orderBy: {
         updatedAt: "desc",
@@ -162,11 +175,12 @@ export default async function DashboardPage() {
         },
       },
     }),
-    prisma.applicationContact.findMany({
+    prisma.callUp.findMany({
       where: {
-        application: {
-          userId: session.user.id,
-          archivedAt: null,
+        userId: session.user.id,
+        archivedAt: null,
+        contactId: {
+          not: null,
         },
       },
       orderBy: {
@@ -175,10 +189,14 @@ export default async function DashboardPage() {
       take: 5,
       select: {
         id: true,
-        role: true,
+        title: true,
+        notes: true,
+        scheduledAt: true,
+        status: true,
         updatedAt: true,
         contact: {
           select: {
+            id: true,
             fullName: true,
             email: true,
             linkedinUrl: true,
@@ -251,7 +269,7 @@ export default async function DashboardPage() {
     {
       label: "Tasks",
       value: openTasksCount,
-      subtitle: "Open actions across active applications.",
+      subtitle: "Open actions across your workflow.",
       classes:
         "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white",
       iconClasses: "bg-amber-500 text-white",
@@ -282,7 +300,7 @@ export default async function DashboardPage() {
             </p>
             <p className="mt-2 text-sm text-slate-600">{heroDescription}</p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 mb-4 flex flex-wrap gap-2">
               <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
                 {totalApplications} tracked
               </span>
@@ -298,6 +316,11 @@ export default async function DashboardPage() {
                 </span>
               ) : null}
             </div>
+
+            <DashboardQuickActions
+              applications={applications}
+              contacts={contacts}
+            />
           </div>
 
           <div className="flex flex-wrap gap-3">
