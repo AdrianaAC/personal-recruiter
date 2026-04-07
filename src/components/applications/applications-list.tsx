@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -26,10 +26,12 @@ type ApplicationsListProps = {
   emptyActionLabel: string;
   className?: string;
   maxItems?: number;
+  itemsPerPage?: number;
   searchQuery?: string;
   emphasizeDashboard?: boolean;
   showSupplementalTags?: boolean;
   showJobPostAction?: boolean;
+  dateTagMode?: "created" | "updated";
 };
 
 function formatLabel(value: string) {
@@ -248,11 +250,23 @@ function matchesApplication(
     formatLabel(application.priority),
     application.jobUrl ?? "",
     new Date(application.createdAt).toLocaleDateString(),
+    application.updatedAt
+      ? new Date(application.updatedAt).toLocaleDateString()
+      : "",
   ];
 
   return searchableFields.some((field) =>
     field.toLowerCase().includes(normalizedQuery),
   );
+}
+
+function getDisplayDate(
+  application: ApplicationListItem,
+  dateTagMode: "created" | "updated",
+) {
+  return dateTagMode === "updated"
+    ? application.updatedAt ?? application.createdAt
+    : application.createdAt;
 }
 
 export function ApplicationsList({
@@ -263,29 +277,67 @@ export function ApplicationsList({
   emptyActionLabel,
   className,
   maxItems,
+  itemsPerPage,
   searchQuery,
   emphasizeDashboard = false,
   showSupplementalTags = false,
   showJobPostAction = false,
+  dateTagMode = "created",
 }: ApplicationsListProps) {
   const router = useRouter();
   const [applications, setApplications] =
     useState<ApplicationListItem[]>(initialApplications);
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const normalizedQuery = searchQuery?.trim().toLowerCase() ?? "";
+  const shouldPaginate =
+    typeof itemsPerPage === "number" && Number.isFinite(itemsPerPage) && itemsPerPage > 0;
 
-  const visibleApplications = useMemo(() => {
-    const filtered = applications.filter((application) =>
+  const filteredApplications = useMemo(() => {
+    return applications.filter((application) =>
       matchesApplication(application, normalizedQuery),
     );
+  }, [applications, normalizedQuery]);
 
-    if (!normalizedQuery && typeof maxItems === "number") {
-      return filtered.slice(0, maxItems);
+  const totalPages = shouldPaginate
+    ? Math.max(1, Math.ceil(filteredApplications.length / itemsPerPage))
+    : 1;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [normalizedQuery, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage((previousPage) => Math.min(previousPage, totalPages));
+  }, [totalPages]);
+
+  const visibleApplications = useMemo(() => {
+    if (shouldPaginate) {
+      const pageStart = (currentPage - 1) * itemsPerPage;
+      return filteredApplications.slice(pageStart, pageStart + itemsPerPage);
     }
 
-    return filtered;
-  }, [applications, maxItems, normalizedQuery]);
+    if (!normalizedQuery && typeof maxItems === "number") {
+      return filteredApplications.slice(0, maxItems);
+    }
+
+    return filteredApplications;
+  }, [
+    currentPage,
+    filteredApplications,
+    itemsPerPage,
+    maxItems,
+    normalizedQuery,
+    shouldPaginate,
+  ]);
+
+  const pageStart = shouldPaginate
+    ? (currentPage - 1) * itemsPerPage + 1
+    : 0;
+  const pageEnd = shouldPaginate
+    ? Math.min(currentPage * itemsPerPage, filteredApplications.length)
+    : 0;
 
   async function handleDelete(application: ApplicationListItem) {
     const confirmed = window.confirm(
@@ -349,7 +401,9 @@ export function ApplicationsList({
 
       setApplications((prev) => {
         const next = [result, ...prev];
-        return typeof maxItems === "number" ? next.slice(0, maxItems) : next;
+        return !shouldPaginate && typeof maxItems === "number"
+          ? next.slice(0, maxItems)
+          : next;
       });
 
       startTransition(() => {
@@ -500,7 +554,8 @@ export function ApplicationsList({
                 </span>
 
                 <span className="rounded-full bg-white px-2 py-1 text-black ring-1 ring-black/20">
-                  Added {new Date(application.createdAt).toLocaleDateString()}
+                  {dateTagMode === "updated" ? "Updated" : "Added"}{" "}
+                  {new Date(getDisplayDate(application, dateTagMode)).toLocaleDateString()}
                 </span>
               </div>
 
@@ -562,6 +617,40 @@ export function ApplicationsList({
           </div>
         );
       })}
+
+      {shouldPaginate && filteredApplications.length > 0 ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm md:flex-row md:items-center md:justify-between">
+          <p>
+            Showing {pageStart}-{pageEnd} of {filteredApplications.length} applications
+          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+
+            <span className="min-w-24 text-center font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+              disabled={currentPage === totalPages}
+              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -107,7 +107,7 @@ export default async function DashboardPage() {
         archivedAt: null,
       },
       orderBy: {
-        createdAt: "desc",
+        updatedAt: "desc",
       },
       select: {
         id: true,

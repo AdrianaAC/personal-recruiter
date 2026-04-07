@@ -62,9 +62,10 @@ export function RecentApplicationsSection({
         emptyDescription="Start tracking your opportunities by creating your first application."
         emptyActionHref="/dashboard/applications/new"
         emptyActionLabel="Create first application"
-        maxItems={5}
+        itemsPerPage={10}
         searchQuery={deferredSearchQuery}
         emphasizeDashboard
+        dateTagMode="updated"
       />
     </section>
   );
