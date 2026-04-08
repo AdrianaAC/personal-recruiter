@@ -110,6 +110,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const task = await prisma.task.create({
       data: {
+        userId: session.user.id,
         applicationId,
         title: data.title,
         description: data.description || null,

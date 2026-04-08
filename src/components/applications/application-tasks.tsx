@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 type Task = {
   id: string;
@@ -15,6 +15,7 @@ type Task = {
 type ApplicationTasksProps = {
   applicationId: string;
   initialTasks: Task[];
+  extraContent?: ReactNode;
 };
 
 type TaskFormState = {
@@ -28,6 +29,10 @@ const initialFormState: TaskFormState = {
   description: "",
   dueDate: "",
 };
+
+async function readJsonSafely(response: Response) {
+  return response.json().catch(() => null);
+}
 
 function formatDate(value: string | Date | null) {
   if (!value) return "No due date";
@@ -43,6 +48,7 @@ function toDateInputValue(value: string | Date | null) {
 export function ApplicationTasks({
   applicationId,
   initialTasks,
+  extraContent,
 }: ApplicationTasksProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [form, setForm] = useState<TaskFormState>(initialFormState);
@@ -95,10 +101,10 @@ export function ApplicationTasks({
         body: JSON.stringify(form),
       });
 
-      const result = await response.json();
+      const result = await readJsonSafely(response);
 
       if (!response.ok) {
-        setError(result?.error || "Failed to create task.");
+        setError(result?.error || `Failed to create task (${response.status}).`);
         return;
       }
 
@@ -117,18 +123,21 @@ export function ApplicationTasks({
     setError(null);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(
+        `/api/applications/${applicationId}/tasks/${taskId}`,
+        {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(editForm),
-      });
+        },
+      );
 
-      const result = await response.json();
+      const result = await readJsonSafely(response);
 
       if (!response.ok) {
-        setError(result?.error || "Failed to update task.");
+        setError(result?.error || `Failed to update task (${response.status}).`);
         return;
       }
 
@@ -158,14 +167,17 @@ export function ApplicationTasks({
     setError(null);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(
+        `/api/applications/${applicationId}/tasks/${taskId}`,
+        {
         method: "DELETE",
-      });
+        },
+      );
 
-      const result = await response.json();
+      const result = await readJsonSafely(response);
 
       if (!response.ok) {
-        setError(result?.error || "Failed to delete task.");
+        setError(result?.error || `Failed to delete task (${response.status}).`);
         return;
       }
 
@@ -183,38 +195,43 @@ export function ApplicationTasks({
     }
   }
 
-async function handleToggleCompleted(task: Task) {
-  setError(null);
+  async function handleToggleCompleted(task: Task) {
+    setError(null);
 
-  try {
-    const response = await fetch(`/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title: task.title,
-        description: task.description ?? "",
-        dueDate: toDateInputValue(task.dueDate),
-        completed: !task.completed,
-      }),
-    });
+    try {
+      const response = await fetch(
+        `/api/applications/${applicationId}/tasks/${task.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: task.title,
+            description: task.description ?? "",
+            dueDate: toDateInputValue(task.dueDate),
+            completed: !task.completed,
+          }),
+        },
+      );
 
-    const result = await response.json();
+      const result = await readJsonSafely(response);
 
-    if (!response.ok) {
-      setError(result?.error || "Failed to update task status.");
-      return;
+      if (!response.ok) {
+        setError(
+          result?.error || `Failed to update task status (${response.status}).`,
+        );
+        return;
+      }
+
+      setTasks((prev) =>
+        sortTasks(prev.map((item) => (item.id === task.id ? result : item))),
+      );
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong while updating task status.");
     }
-
-    setTasks((prev) =>
-      sortTasks(prev.map((item) => (item.id === task.id ? result : item))),
-    );
-  } catch (err) {
-    console.error(err);
-    setError("Something went wrong while updating task status.");
   }
-}
 
   return (
     <div className="space-y-6">
@@ -284,6 +301,8 @@ async function handleToggleCompleted(task: Task) {
           </button>
         </form>
       </section>
+
+      {extraContent}
 
       {error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

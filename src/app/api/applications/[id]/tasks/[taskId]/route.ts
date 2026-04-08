@@ -58,6 +58,12 @@ export async function PATCH(request: Request, context: RouteContext) {
         title: data.title,
         description: data.description || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        ...(typeof data.completed === "boolean"
+          ? {
+              completed: data.completed,
+              archivedAt: data.completed ? new Date() : null,
+            }
+          : {}),
       },
       select: {
         id: true,
@@ -72,7 +78,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     return NextResponse.json(updatedTask, { status: 200 });
   } catch (error) {
-    console.error("PATCH /api/tasks/[taskId] error:", error);
+    console.error("PATCH /api/applications/[id]/tasks/[taskId] error:", error);
 
     return NextResponse.json(
       { error: "Failed to update task" },
@@ -115,7 +121,7 @@ export async function DELETE(_: Request, context: RouteContext) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error("DELETE /api/tasks/[taskId] error:", error);
+    console.error("DELETE /api/applications/[id]/tasks/[taskId] error:", error);
 
     return NextResponse.json(
       { error: "Failed to delete task" },
