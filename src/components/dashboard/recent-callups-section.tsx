@@ -203,8 +203,7 @@ export function RecentCallUpsSection({
     return filteredCallUps.slice(start, start + itemsPerPage);
   }, [filteredCallUps, page]);
 
-  const currentItemPosition =
-    filteredCallUps.length === 0 ? 0 : (page - 1) * itemsPerPage + 1;
+  const currentItemCount = visibleCallUps.length;
 
   async function handleCompleteFollowUp(callUpId: string) {
     const previousFollowUps = followUpItems;
@@ -287,11 +286,11 @@ export function RecentCallUpsSection({
           ) : null}
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {viewHref ? (
             <Link
               href={viewHref}
-              className="inline-flex items-center rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-900 transition hover:bg-sky-50"
+              className="inline-flex items-center rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-50"
             >
               {viewLabel}
             </Link>
@@ -359,7 +358,7 @@ export function RecentCallUpsSection({
               key={callUp.id}
               className="min-h-[124px] rounded-2xl border border-sky-200 bg-gradient-to-r from-white via-sky-50/40 to-white px-4 py-3 shadow-md transition hover:shadow-lg"
             >
-              <div className="grid gap-4 lg:grid-cols-3 lg:items-center lg:gap-6">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_auto_auto] lg:items-center lg:gap-4">
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-slate-900">
                     {callUp.title}
@@ -376,29 +375,36 @@ export function RecentCallUpsSection({
                     <span>{callUp.notes ?? "No description"}</span>
                   </div>
 
-                  <p className="mt-3 text-sm text-slate-500">
+                  <p
+                    className="mt-3 truncate whitespace-nowrap text-sm text-slate-500"
+                    title={
+                      callUp.application
+                        ? `${callUp.application.companyName} · ${callUp.application.roleTitle}`
+                        : "Standalone FollowUp"
+                    }
+                  >
                     {callUp.application
                       ? `${callUp.application.companyName} · ${callUp.application.roleTitle}`
                       : "Standalone FollowUp"}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 lg:justify-center">
+                <div className="flex flex-nowrap items-center justify-center gap-1 self-center text-[10px] leading-none lg:-translate-x-2">
                   {callUp.application ? (
                     <Link
                       href={`/dashboard/applications/${callUp.application.id}`}
-                      className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-300 transition hover:bg-emerald-200"
+                      className="inline-flex items-center whitespace-nowrap rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-900 ring-1 ring-emerald-300 transition hover:bg-emerald-200"
                     >
                       Open application
                     </Link>
                   ) : (
-                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300">
+                    <span className="inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700 ring-1 ring-slate-300">
                       General FollowUp
                     </span>
                   )}
 
                   <span
-                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                    className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 font-semibold ring-1 ${
                       itemActionMode === "delete"
                         ? "bg-rose-100 text-rose-900 ring-rose-300"
                         : "bg-sky-100 text-sky-900 ring-sky-300"
@@ -408,7 +414,7 @@ export function RecentCallUpsSection({
                   </span>
 
                   <span
-                    className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200"
+                    className="inline-flex items-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 font-medium text-slate-600 ring-1 ring-slate-200"
                     title={callUp.updatedAt ? new Date(callUp.updatedAt).toLocaleString() : undefined}
                   >
                     Updated {formatRelativeDate(callUp.updatedAt ?? callUp.scheduledAt)}
@@ -450,7 +456,7 @@ export function RecentCallUpsSection({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              {currentItemPosition} of {filteredCallUps.length}
+              {currentItemCount} of {filteredCallUps.length}
             </span>
 
             <button

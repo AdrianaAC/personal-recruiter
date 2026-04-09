@@ -260,8 +260,7 @@ export function RecentTasksSection({
     return filteredTasks.slice(start, start + itemsPerPage);
   }, [filteredTasks, page]);
 
-  const currentItemPosition =
-    filteredTasks.length === 0 ? 0 : (page - 1) * itemsPerPage + 1;
+  const currentItemCount = visibleTasks.length;
 
   async function handleCompleteTask(taskId: string) {
     const previousTasks = taskItems;
@@ -444,7 +443,7 @@ export function RecentTasksSection({
           {viewHref ? (
             <Link
               href={viewHref}
-              className="inline-flex items-center rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 transition hover:bg-amber-50"
+              className="inline-flex items-center rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-50"
             >
               {viewLabel}
             </Link>
@@ -533,7 +532,7 @@ export function RecentTasksSection({
                 }
               }}
             >
-              <div className="grid gap-4 lg:grid-cols-3 lg:items-center lg:gap-6">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_auto_auto] lg:items-center lg:gap-4">
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-slate-900">
                     {task.title}
@@ -550,30 +549,37 @@ export function RecentTasksSection({
                     <span>{task.description ?? "No description"}</span>
                   </div>
 
-                  <p className="mt-3 text-sm text-slate-500">
+                  <p
+                    className="mt-3 truncate whitespace-nowrap text-sm text-slate-500"
+                    title={
+                      task.application
+                        ? `${task.application.companyName} · ${task.application.roleTitle}`
+                        : "Standalone task"
+                    }
+                  >
                     {task.application
                       ? `${task.application.companyName} · ${task.application.roleTitle}`
                       : "Standalone task"}
                   </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 lg:justify-center">
+                <div className="flex flex-nowrap items-center justify-center gap-1 self-center text-[10px] leading-none lg:-translate-x-2">
                   {task.application ? (
                     <Link
                       href={`/dashboard/applications/${task.application.id}`}
                       onClick={(event) => event.stopPropagation()}
-                      className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-emerald-300 transition hover:bg-emerald-200"
+                      className="inline-flex items-center whitespace-nowrap rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-900 ring-1 ring-emerald-300 transition hover:bg-emerald-200"
                     >
                       Open application
                     </Link>
                   ) : (
-                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300">
+                    <span className="inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700 ring-1 ring-slate-300">
                       General task
                     </span>
                   )}
 
                   <span
-                    className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                    className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 font-semibold ring-1 ${
                       itemActionMode === "delete"
                         ? "bg-rose-100 text-rose-900 ring-rose-300"
                         : "bg-amber-100 text-amber-900 ring-amber-300"
@@ -583,7 +589,7 @@ export function RecentTasksSection({
                   </span>
 
                   <span
-                    className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200"
+                    className="inline-flex items-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 font-medium text-slate-600 ring-1 ring-slate-200"
                     title={task.updatedAt ? new Date(task.updatedAt).toLocaleString() : undefined}
                   >
                     Updated {formatRelativeDate(task.updatedAt ?? task.dueDate)}
@@ -694,7 +700,7 @@ export function RecentTasksSection({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              {currentItemPosition} of {filteredTasks.length}
+              {currentItemCount} of {filteredTasks.length}
             </span>
 
             <button

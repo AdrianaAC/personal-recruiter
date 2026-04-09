@@ -6,6 +6,7 @@ import { RecentTasksSection } from "@/components/dashboard/recent-tasks-section"
 import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-section";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 import { DashboardActivityTimeline } from "@/components/dashboard/dashboard-activity-timeline";
+import { DashboardAiFeedbackToggle } from "@/components/dashboard/dashboard-ai-feedback-toggle";
 
 const RECENT_SECTION_LIMIT = 25;
 
@@ -558,35 +559,41 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-amber-50/50 to-sky-50/60 p-6 shadow-sm">
         <div className="flex flex-col gap-6">
-          <div className="max-w-3xl">
-            <p className="text-sm font-medium text-slate-500">Dashboard</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-              Welcome back{session.user.name ? `, ${session.user.name}` : ""}.
-            </h1>
-            <p className="mt-3 text-lg font-medium text-slate-800">
-              {heroHeadline}
-            </p>
-            <p className="mt-2 text-sm text-slate-600">{heroDescription}</p>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-sm font-medium text-slate-500">Dashboard</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                Welcome back{session.user.name ? `, ${session.user.name}` : ""}.
+              </h1>
+              <p className="mt-3 text-lg font-medium text-slate-800">
+                {heroHeadline}
+              </p>
+              <p className="mt-2 text-sm text-slate-600">{heroDescription}</p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                {totalApplicationsCount} tracked
-              </span>
-              <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                {pipelineApplicationsCount} in flow
-              </span>
-              {latestActivity ? (
+              <div className="mt-4 flex flex-wrap gap-2">
                 <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                  Latest: {latestActivity.summaryLabel}
+                  {totalApplicationsCount} tracked
                 </span>
-              ) : null}
+                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                  {pipelineApplicationsCount} in flow
+                </span>
+                {latestActivity ? (
+                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                    Latest: {latestActivity.summaryLabel}
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="mt-5">
+                <DashboardQuickActions
+                  applications={applications}
+                  contacts={contacts}
+                />
+              </div>
             </div>
 
-            <div className="mt-5">
-              <DashboardQuickActions
-                applications={applications}
-                contacts={contacts}
-              />
+            <div className="flex justify-start lg:justify-end">
+              <DashboardAiFeedbackToggle />
             </div>
           </div>
         </div>
@@ -658,7 +665,11 @@ export default async function DashboardPage() {
         </section>
       ) : null}
 
-      <RecentApplicationsSection applications={applications} />
+      <RecentApplicationsSection
+        applications={applications}
+        showDeleteAction={false}
+        showArchiveAction={false}
+      />
 
       <section className="grid gap-6 xl:grid-cols-2">
         <RecentTasksSection tasks={recentTasks} />

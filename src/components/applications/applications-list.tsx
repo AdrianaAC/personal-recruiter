@@ -361,12 +361,7 @@ export function ApplicationsList({
     normalizedQuery,
     shouldPaginate,
   ]);
-  const currentItemPosition =
-    filteredApplications.length === 0
-      ? 0
-      : shouldPaginate
-        ? (currentPage - 1) * itemsPerPage + 1
-        : 1;
+  const currentItemCount = visibleApplications.length;
 
   async function handleDelete(application: ApplicationListItem) {
     const confirmed = window.confirm(
@@ -677,7 +672,7 @@ export function ApplicationsList({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              {currentItemPosition} of {filteredApplications.length}
+              {currentItemCount} of {filteredApplications.length}
             </span>
 
             <button
