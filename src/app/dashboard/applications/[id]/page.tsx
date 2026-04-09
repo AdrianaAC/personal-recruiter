@@ -9,6 +9,8 @@ import { ApplicationSummaryCards } from "@/components/applications/application-s
 import { ApplicationNextInterview } from "@/components/applications/application-next-interview";
 import { ApplicationActivityTimeline } from "@/components/applications/application-activity-timeline";
 import { ApplicationContacts } from "@/components/applications/application-contacts";
+import { ApplicationCallUps } from "@/components/applications/application-call-ups";
+import { ApplicationCallUpList } from "@/components/applications/application-call-up-list";
 
 type ApplicationDetailPageProps = {
   params: Promise<{
@@ -64,6 +66,14 @@ export default async function ApplicationDetailPage({
           createdAt: "desc",
         },
       },
+      callUps: {
+        include: {
+          contact: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
   });
 
@@ -114,6 +124,17 @@ export default async function ApplicationDetailPage({
       description: task.title,
       timestamp: task.updatedAt ?? task.createdAt,
       meta: task.completed ? "Completed" : "Open",
+    })),
+
+    ...application.callUps.map((callUp) => ({
+      id: `call-up-${callUp.id}`,
+      kind: "application" as const,
+      title: "FollowUp added",
+      description: callUp.contact
+        ? `${callUp.title} - ${callUp.contact.fullName}`
+        : callUp.title,
+      timestamp: callUp.updatedAt ?? callUp.createdAt,
+      meta: formatLabel(callUp.status),
     })),
 
     ...application.interviews.map((interview) => ({
@@ -314,7 +335,20 @@ export default async function ApplicationDetailPage({
           <ApplicationTasks
             applicationId={application.id}
             initialTasks={application.tasks}
+            extraContent={
+              <ApplicationCallUps
+                applicationId={application.id}
+                contacts={application.contacts.map((item) => ({
+                  id: item.contact.id,
+                  fullName: item.contact.fullName,
+                  companyName: item.contact.companyName,
+                  jobTitle: item.contact.jobTitle,
+                }))}
+              />
+            }
           />
+
+          <ApplicationCallUpList callUps={application.callUps} />
         </div>
       </section>
 

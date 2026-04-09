@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createApplicationSchema } from "@/lib/validations/application";
@@ -8,6 +9,14 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+function revalidateApplicationPaths(id: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/archive");
+  revalidatePath("/dashboard/applications");
+  revalidatePath(`/dashboard/applications/${id}`);
+  revalidatePath(`/dashboard/applications/${id}/edit`);
+}
 
 export async function GET(_: Request, context: RouteContext) {
   try {
@@ -131,6 +140,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
     });
 
+    revalidateApplicationPaths(id);
+
     return NextResponse.json(updatedApplication, { status: 200 });
   } catch (error) {
     console.error("PATCH /api/applications/[id] error:", error);
@@ -174,6 +185,8 @@ export async function DELETE(_: Request, context: RouteContext) {
         id,
       },
     });
+
+    revalidateApplicationPaths(id);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

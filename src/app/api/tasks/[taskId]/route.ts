@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createTaskSchema } from "@/lib/validations/task";
@@ -9,34 +11,59 @@ type RouteContext = {
   }>;
 };
 
-export async function PATCH(request: Request, context: RouteContext) {
+async function readJsonSafely(request: Request) {
   try {
-    const session = await auth();
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+function revalidateTaskPaths(applicationId?: string | null) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/archive");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
 
-    const { taskId } = await context.params;
+  if (applicationId) {
+    revalidatePath(`/dashboard/applications/${applicationId}`);
+  }
+}
 
-    const existingTask = await prisma.task.findFirst({
-      where: {
-        id: taskId,
-        application: {
-          userId: session.user.id,
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
+export async function PATCH(request: Request, context: RouteContext) {
+  const session = await auth();
 
-    if (!existingTask) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-    const body = await request.json();
-    const parsed = createTaskSchema.safeParse(body);
+  const { taskId } = await context.params;
+
+  const task = await prisma.task.findFirst({
+    where: {
+      id: taskId,
+      userId: session.user.id,
+    },
+  });
+
+  if (!task) {
+    return NextResponse.json({ error: "Task not found" }, { status: 404 });
+  }
+
+  const body = await readJsonSafely(request);
+  const hasEditPayload =
+    body &&
+    typeof body === "object" &&
+    Object.keys(body).length > 0;
+
+  let updated;
+
+  if (hasEditPayload) {
+    const parsed = createTaskSchema
+      .extend({
+        applicationId: z.string().optional().nullable().or(z.literal("")),
+      })
+      .safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -50,38 +77,42 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const data = parsed.data;
 
-    const updatedTask = await prisma.task.update({
-      where: {
-        id: taskId,
-      },
+    updated = await prisma.task.update({
+      where: { id: taskId },
       data: {
         title: data.title,
         description: data.description || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        applicationId:
+          typeof data.applicationId === "string" && data.applicationId.trim()
+            ? data.applicationId
+            : null,
         ...(typeof data.completed === "boolean"
-          ? { completed: data.completed }
+          ? {
+              completed: data.completed,
+              archivedAt: data.completed ? new Date() : null,
+            }
           : {}),
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        dueDate: true,
-        completed: true,
-        createdAt: true,
-        updatedAt: true,
-      },
     });
-
-    return NextResponse.json(updatedTask, { status: 200 });
-  } catch (error) {
-    console.error("PATCH /api/tasks/[taskId] error:", error);
-
-    return NextResponse.json(
-      { error: "Failed to update task" },
-      { status: 500 },
-    );
+  } else {
+    updated = await prisma.task.update({
+      where: { id: taskId },
+      data: task.completed
+        ? {
+            completed: false,
+            archivedAt: null,
+          }
+        : {
+            completed: true,
+            archivedAt: new Date(),
+          },
+    });
   }
+
+  revalidateTaskPaths(updated.applicationId);
+
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(_: Request, context: RouteContext) {
@@ -97,12 +128,11 @@ export async function DELETE(_: Request, context: RouteContext) {
     const existingTask = await prisma.task.findFirst({
       where: {
         id: taskId,
-        application: {
-          userId: session.user.id,
-        },
+        userId: session.user.id,
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -115,6 +145,8 @@ export async function DELETE(_: Request, context: RouteContext) {
         id: taskId,
       },
     });
+
+    revalidateTaskPaths(existingTask.applicationId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
