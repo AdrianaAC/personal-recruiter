@@ -254,7 +254,7 @@ export function ApplicationTasks({
                 setForm((prev) => ({ ...prev, title: e.target.value }))
               }
               className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-              placeholder="e.g. Send follow-up email"
+              placeholder="e.g. Send FollowUp email"
               required
             />
           </div>
@@ -315,7 +315,7 @@ export function ApplicationTasks({
           <div>
             <h2 className="text-lg font-semibold">Tasks</h2>
             <p className="mt-1 text-sm text-gray-600">
-              Organize follow-ups and action items.
+              Organize FollowUps and action items.
             </p>
           </div>
 

@@ -31,6 +31,7 @@ type ApplicationsListProps = {
   emphasizeDashboard?: boolean;
   showSupplementalTags?: boolean;
   showJobPostAction?: boolean;
+  showArchiveAction?: boolean;
   dateTagMode?: "created" | "updated";
 };
 
@@ -101,6 +102,28 @@ function getStatusAccentClass(status: string) {
     default:
       return "bg-gray-300";
   }
+}
+
+function formatRelativeDate(value: string | Date) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.round(diff / (1000 * 60));
+  const hours = Math.round(diff / (1000 * 60 * 60));
+  const days = Math.round(diff / (1000 * 60 * 60 * 24));
+
+  if (minutes < 60) {
+    return `${Math.max(1, minutes)}m ago`;
+  }
+
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  if (days < 14) {
+    return `${days}d ago`;
+  }
+
+  return date.toLocaleDateString();
 }
 
 function TrashIcon() {
@@ -213,12 +236,12 @@ function getActivityCopy(application: ApplicationListItem) {
     case "SAVED":
       return "Next up: define your first outreach or application step.";
     case "APPLIED":
-      return "Next up: set a follow-up reminder while you wait.";
+      return "Next up: set a FollowUp reminder while you wait.";
     case "SCREENING":
     case "TECHNICAL_INTERVIEW":
     case "TAKE_HOME":
     case "FINAL_INTERVIEW":
-      return "Next up: keep prep notes, contacts, and follow-ups moving.";
+      return "Next up: keep prep notes, contacts, and FollowUps moving.";
     case "OFFER":
       return "Next up: capture offer details and your decision notes.";
     case "REJECTED":
@@ -282,6 +305,7 @@ export function ApplicationsList({
   emphasizeDashboard = false,
   showSupplementalTags = false,
   showJobPostAction = false,
+  showArchiveAction = true,
   dateTagMode = "created",
 }: ApplicationsListProps) {
   const router = useRouter();
@@ -331,13 +355,6 @@ export function ApplicationsList({
     normalizedQuery,
     shouldPaginate,
   ]);
-
-  const pageStart = shouldPaginate
-    ? (currentPage - 1) * itemsPerPage + 1
-    : 0;
-  const pageEnd = shouldPaginate
-    ? Math.min(currentPage * itemsPerPage, filteredApplications.length)
-    : 0;
 
   async function handleDelete(application: ApplicationListItem) {
     const confirmed = window.confirm(
@@ -502,8 +519,8 @@ export function ApplicationsList({
             key={application.id}
             className={`${
               emphasizeDashboard
-                ? "relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-white to-slate-50/70 p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"
-                : "rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+                ? "relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-white via-emerald-50/30 to-white p-5 shadow-md transition hover:border-emerald-300 hover:shadow-lg"
+                : "rounded-xl border border-gray-200 bg-white p-4 shadow-md transition hover:border-gray-300 hover:shadow-lg"
             }`}
           >
             {emphasizeDashboard ? (
@@ -522,7 +539,7 @@ export function ApplicationsList({
                 </h2>
                 <p className="text-sm text-gray-700">{application.roleTitle}</p>
                 {emphasizeDashboard ? (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 line-clamp-2 text-xs font-medium text-slate-500">
                     {getActivityCopy(application)}
                   </p>
                 ) : null}
@@ -542,7 +559,7 @@ export function ApplicationsList({
                 ) : null}
 
                 <span
-                  className={`rounded-full px-2 py-1 ${getStatusTagClass(application.status)}`}
+                  className={`rounded-full px-3 py-1 font-semibold ${getStatusTagClass(application.status)}`}
                 >
                   {formatLabel(application.status)}
                 </span>
@@ -553,9 +570,14 @@ export function ApplicationsList({
                   Priority: {formatLabel(application.priority)}
                 </span>
 
-                <span className="rounded-full bg-white px-2 py-1 text-black ring-1 ring-black/20">
+                <span
+                  className="rounded-full bg-white/80 px-2 py-1 text-slate-600 ring-1 ring-slate-200"
+                  title={new Date(
+                    getDisplayDate(application, dateTagMode),
+                  ).toLocaleString()}
+                >
                   {dateTagMode === "updated" ? "Updated" : "Added"}{" "}
-                  {new Date(getDisplayDate(application, dateTagMode)).toLocaleDateString()}
+                  {formatRelativeDate(getDisplayDate(application, dateTagMode))}
                 </span>
               </div>
 
@@ -571,47 +593,51 @@ export function ApplicationsList({
                   </a>
                 ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => handleDelete(application)}
-                  disabled={isBusy}
-                  aria-label={`Delete ${application.companyName}`}
-                  title="Delete application"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <TrashIcon />
-                </button>
+                <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(application)}
+                    disabled={isBusy}
+                    aria-label={`Delete ${application.companyName}`}
+                    title="Delete application"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <TrashIcon />
+                  </button>
 
-                <Link
-                  href={`/dashboard/applications/${application.id}/edit`}
-                  aria-label={`Edit ${application.companyName}`}
-                  title="Edit application"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
-                >
-                  <PencilIcon />
-                </Link>
+                  <Link
+                    href={`/dashboard/applications/${application.id}/edit`}
+                    aria-label={`Edit ${application.companyName}`}
+                    title="Edit application"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
+                  >
+                    <PencilIcon />
+                  </Link>
 
-                <button
-                  type="button"
-                  onClick={() => handleArchive(application)}
-                  disabled={isBusy}
-                  aria-label={`Archive ${application.companyName}`}
-                  title="Archive application"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <ArchiveIcon />
-                </button>
+                  {showArchiveAction ? (
+                    <button
+                      type="button"
+                      onClick={() => handleArchive(application)}
+                      disabled={isBusy}
+                      aria-label={`Archive ${application.companyName}`}
+                      title="Archive application"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <ArchiveIcon />
+                    </button>
+                  ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => handleCopy(application)}
-                  disabled={isBusy}
-                  aria-label={`Duplicate ${application.companyName}`}
-                  title="Duplicate application"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 transition hover:border-gray-400 hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <CopyIcon />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(application)}
+                    disabled={isBusy}
+                    aria-label={`Duplicate ${application.companyName}`}
+                    title="Duplicate application"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-gray-400 hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <CopyIcon />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -619,11 +645,7 @@ export function ApplicationsList({
       })}
 
       {shouldPaginate && filteredApplications.length > 0 ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm md:flex-row md:items-center md:justify-between">
-          <p>
-            Showing {pageStart}-{pageEnd} of {filteredApplications.length} applications
-          </p>
-
+        <div className="flex justify-center pt-2 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -635,7 +657,7 @@ export function ApplicationsList({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              Page {currentPage} of {totalPages}
+              {currentPage} of {totalPages}
             </span>
 
             <button

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -39,8 +40,15 @@ export async function PATCH(_: Request, context: RouteContext) {
         : {
             archivedAt: new Date(),
             status: "DONE",
-          },
+        },
     });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/call-ups");
+
+    if (updated.applicationId) {
+      revalidatePath(`/dashboard/applications/${updated.applicationId}`);
+    }
 
     return NextResponse.json(updated);
   } catch (error) {

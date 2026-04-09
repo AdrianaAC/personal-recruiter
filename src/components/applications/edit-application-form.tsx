@@ -55,6 +55,7 @@ type EditApplicationFormProps = {
 
 export function EditApplicationForm({ application }: EditApplicationFormProps) {
   const router = useRouter();
+  const applicationPath = `/dashboard/applications/${application.id}`;
 
   const [form, setForm] = useState<FormState>({
     companyName: application.companyName,
@@ -108,8 +109,7 @@ export function EditApplicationForm({ application }: EditApplicationFormProps) {
         return;
       }
 
-      router.push(`/dashboard/applications/${application.id}`);
-      router.refresh();
+      window.location.assign(applicationPath);
     } catch (err) {
       console.error(err);
       setError("Something went wrong while updating the application.");
@@ -142,8 +142,7 @@ export function EditApplicationForm({ application }: EditApplicationFormProps) {
         return;
       }
 
-      router.push("/dashboard/applications");
-      router.refresh();
+      window.location.assign("/dashboard/applications");
     } catch (err) {
       console.error(err);
       setError("Something went wrong while deleting the application.");
@@ -303,9 +302,7 @@ export function EditApplicationForm({ application }: EditApplicationFormProps) {
 
         <button
           type="button"
-          onClick={() =>
-            router.push(`/dashboard/applications/${application.id}`)
-          }
+          onClick={() => router.push(applicationPath)}
           disabled={isSubmitting || isDeleting}
           className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >

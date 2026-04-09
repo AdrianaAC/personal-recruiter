@@ -260,7 +260,7 @@ export function ApplicationForm() {
             value={form.applicationNotes}
             onChange={(e) => updateField("applicationNotes", e.target.value)}
             className="min-h-[160px] w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-            placeholder="Capture recruiter context, interview prep, follow-ups, or anything else you want to build on later..."
+            placeholder="Capture recruiter context, interview prep, FollowUps, or anything else you want to build on later..."
           />
         </div>
       </div>

@@ -129,7 +129,7 @@ export default async function ApplicationDetailPage({
     ...application.callUps.map((callUp) => ({
       id: `call-up-${callUp.id}`,
       kind: "application" as const,
-      title: "Call-up added",
+      title: "FollowUp added",
       description: callUp.contact
         ? `${callUp.title} - ${callUp.contact.fullName}`
         : callUp.title,

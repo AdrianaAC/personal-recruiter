@@ -62,19 +62,19 @@ export function ApplicationCallUps({
 
       if (!response.ok) {
         setError(
-          result?.error || `Failed to create call-up (${response.status}).`,
+          result?.error || `Failed to create FollowUp (${response.status}).`,
         );
         return;
       }
 
       setForm(initialFormState);
-      setSuccess("Call-up created.");
+      setSuccess("FollowUp created.");
       startTransition(() => {
         router.refresh();
       });
     } catch (err) {
       console.error(err);
-      setError("Something went wrong while creating the call-up.");
+      setError("Something went wrong while creating the FollowUp.");
     } finally {
       setIsCreating(false);
     }
@@ -82,9 +82,9 @@ export function ApplicationCallUps({
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-semibold">Add Call-Up</h2>
+      <h2 className="text-lg font-semibold">Add FollowUp</h2>
       <p className="mt-1 text-sm text-gray-600">
-        Schedule follow-up outreach for this application.
+        Schedule FollowUp outreach for this application.
       </p>
 
       <form onSubmit={handleCreateCallUp} className="mt-4 space-y-4">
@@ -100,7 +100,7 @@ export function ApplicationCallUps({
               setForm((prev) => ({ ...prev, title: event.target.value }))
             }
             className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-            placeholder="e.g. Follow up with recruiter"
+            placeholder="e.g. Recruiter FollowUp"
             required
           />
         </div>
@@ -116,7 +116,7 @@ export function ApplicationCallUps({
               setForm((prev) => ({ ...prev, notes: event.target.value }))
             }
             className="min-h-[120px] w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-            placeholder="Optional details about the call-up..."
+            placeholder="Optional details about the FollowUp..."
           />
         </div>
 
@@ -158,7 +158,7 @@ export function ApplicationCallUps({
           </select>
           {contacts.length === 0 ? (
             <p className="text-xs text-gray-500">
-              Attach a contact to this application if you want to link the call-up
+              Attach a contact to this application if you want to link the FollowUp
               to a person.
             </p>
           ) : null}
@@ -169,7 +169,7 @@ export function ApplicationCallUps({
           disabled={isCreating}
           className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isCreating ? "Saving..." : "Add call-up"}
+          {isCreating ? "Saving..." : "Add FollowUp"}
         </button>
       </form>
 

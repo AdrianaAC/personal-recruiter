@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -9,10 +10,19 @@ type RouteContext = {
 };
 
 export async function PATCH(_: Request, context: RouteContext) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { taskId } = await context.params;
 
-  const task = await prisma.task.findUnique({
-    where: { id: taskId },
+  const task = await prisma.task.findFirst({
+    where: {
+      id: taskId,
+      userId: session.user.id,
+    },
   });
 
   if (!task) {
@@ -31,6 +41,13 @@ export async function PATCH(_: Request, context: RouteContext) {
           archivedAt: new Date(),
         },
   });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tasks");
+
+  if (updated.applicationId) {
+    revalidatePath(`/dashboard/applications/${updated.applicationId}`);
+  }
 
   return NextResponse.json(updated);
 }

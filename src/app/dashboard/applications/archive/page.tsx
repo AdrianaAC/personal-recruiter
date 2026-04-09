@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ApplicationsList } from "@/components/applications/applications-list";
 
-export default async function ApplicationsPage() {
+export default async function ArchivedApplicationsPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -14,10 +14,12 @@ export default async function ApplicationsPage() {
   const applications = await prisma.jobApplication.findMany({
     where: {
       userId: session.user.id,
-      archivedAt: null,
+      archivedAt: {
+        not: null,
+      },
     },
     orderBy: {
-      createdAt: "desc",
+      updatedAt: "desc",
     },
     select: {
       id: true,
@@ -29,6 +31,7 @@ export default async function ApplicationsPage() {
       priority: true,
       jobUrl: true,
       createdAt: true,
+      updatedAt: true,
     },
   });
 
@@ -37,10 +40,10 @@ export default async function ApplicationsPage() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            Applications
+            Archived Applications
           </h1>
           <p className="text-sm text-gray-600">
-            Track your job opportunities in one place.
+            Review applications you have archived and kept for reference.
           </p>
         </div>
 
@@ -53,10 +56,10 @@ export default async function ApplicationsPage() {
           </Link>
 
           <Link
-            href="/dashboard/applications/archive"
+            href="/dashboard/applications"
             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
           >
-            Archive
+            Applications
           </Link>
 
           <Link
@@ -70,12 +73,14 @@ export default async function ApplicationsPage() {
 
       <ApplicationsList
         initialApplications={applications}
-        emptyTitle="No applications yet"
-        emptyDescription="Start by saving your first opportunity."
-        emptyActionHref="/dashboard/applications/new"
-        emptyActionLabel="Create first application"
+        emptyTitle="No archived applications"
+        emptyDescription="Applications you archive will show up here."
+        emptyActionHref="/dashboard/applications"
+        emptyActionLabel="Back to applications"
         showSupplementalTags
         showJobPostAction
+        showArchiveAction={false}
+        dateTagMode="updated"
       />
     </div>
   );

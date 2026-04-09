@@ -67,7 +67,7 @@ export function DashboardCallUpQuickAdd({
     if (!res.ok) {
       const errorText = await res.text();
       console.error(errorText);
-      alert("Failed to create call-up.");
+      alert("Failed to create FollowUp.");
       return;
     }
 
@@ -82,11 +82,11 @@ export function DashboardCallUpQuickAdd({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
-        <h2 className="text-lg font-semibold">New Call-Up</h2>
+        <h2 className="text-lg font-semibold">New FollowUp</h2>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <input
-            placeholder="Call title"
+            placeholder="FollowUp title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full rounded-md border px-3 py-2 text-sm"
@@ -121,7 +121,7 @@ export function DashboardCallUpQuickAdd({
             onChange={(e) => setApplicationId(e.target.value)}
             className="w-full rounded-md border px-3 py-2 text-sm"
           >
-            <option value="">No application (standalone call-up)</option>
+            <option value="">No application (standalone FollowUp)</option>
             {applications.map((application) => (
               <option key={application.id} value={application.id}>
                 {application.companyName} — {application.roleTitle}

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +5,7 @@ import { RecentApplicationsSection } from "@/components/dashboard/recent-applica
 import { RecentTasksSection } from "@/components/dashboard/recent-tasks-section";
 import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-section";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
+import { DashboardActivityTimeline } from "@/components/dashboard/dashboard-activity-timeline";
 
 function BriefcaseIcon() {
   return (
@@ -86,6 +86,14 @@ function PhoneIcon() {
   );
 }
 
+function formatLabel(value: string) {
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export default async function DashboardPage() {
   const session = await auth();
 
@@ -95,11 +103,19 @@ export default async function DashboardPage() {
 
   const [
     applications,
+    totalApplicationsCount,
+    pipelineApplicationsCount,
+    recentApplicationActivity,
+    recentTaskActivity,
+    recentFollowUpActivity,
     contacts,
     openTasksCount,
     callUpsCount,
     recentTasks,
     recentCallUps,
+    dueSoonTask,
+    nextPlannedCall,
+    applicationWithoutNextStep,
   ] = await Promise.all([
     prisma.jobApplication.findMany({
       where: {
@@ -118,6 +134,88 @@ export default async function DashboardPage() {
         priority: true,
         createdAt: true,
         updatedAt: true,
+      },
+    }),
+    prisma.jobApplication.count({
+      where: {
+        userId: session.user.id,
+      },
+    }),
+    prisma.jobApplication.count({
+      where: {
+        userId: session.user.id,
+        archivedAt: null,
+        status: {
+          not: "SAVED",
+        },
+      },
+    }),
+    prisma.jobApplication.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+      take: 8,
+      select: {
+        id: true,
+        companyName: true,
+        roleTitle: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        archivedAt: true,
+      },
+    }),
+    prisma.task.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+      take: 8,
+      select: {
+        id: true,
+        title: true,
+        completed: true,
+        updatedAt: true,
+        application: {
+          select: {
+            id: true,
+            companyName: true,
+            roleTitle: true,
+          },
+        },
+      },
+    }),
+    prisma.callUp.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+      take: 8,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        updatedAt: true,
+        contact: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        application: {
+          select: {
+            id: true,
+            companyName: true,
+            roleTitle: true,
+          },
+        },
       },
     }),
     prisma.contact.findMany({
@@ -159,7 +257,6 @@ export default async function DashboardPage() {
       orderBy: {
         updatedAt: "desc",
       },
-      take: 5,
       select: {
         id: true,
         title: true,
@@ -186,7 +283,6 @@ export default async function DashboardPage() {
       orderBy: {
         updatedAt: "desc",
       },
-      take: 5,
       select: {
         id: true,
         title: true,
@@ -213,9 +309,79 @@ export default async function DashboardPage() {
         },
       },
     }),
+    prisma.task.findFirst({
+      where: {
+        userId: session.user.id,
+        completed: false,
+        archivedAt: null,
+        dueDate: {
+          not: null,
+        },
+      },
+      orderBy: {
+        dueDate: "asc",
+      },
+      select: {
+        id: true,
+        title: true,
+        dueDate: true,
+        application: {
+          select: {
+            id: true,
+            companyName: true,
+            roleTitle: true,
+          },
+        },
+      },
+    }),
+    prisma.callUp.findFirst({
+      where: {
+        userId: session.user.id,
+        archivedAt: null,
+        status: "PLANNED",
+        scheduledAt: {
+          not: null,
+        },
+      },
+      orderBy: {
+        scheduledAt: "asc",
+      },
+      select: {
+        id: true,
+        title: true,
+        scheduledAt: true,
+        application: {
+          select: {
+            id: true,
+            companyName: true,
+            roleTitle: true,
+          },
+        },
+      },
+    }),
+    prisma.jobApplication.findFirst({
+      where: {
+        userId: session.user.id,
+        archivedAt: null,
+        OR: [
+          {
+            nextStep: null,
+          },
+          {
+            nextStep: "",
+          },
+        ],
+      },
+      orderBy: {
+        updatedAt: "desc",
+      },
+      select: {
+        id: true,
+        companyName: true,
+        roleTitle: true,
+      },
+    }),
   ]);
-
-  const totalApplications = applications.length;
 
   const inProcessStatuses = [
     "SCREENING",
@@ -224,33 +390,30 @@ export default async function DashboardPage() {
     "FINAL_INTERVIEW",
   ];
 
-  const inProcessCount = applications.filter((application) =>
+  const activeApplicationsInMotionCount = applications.filter((application) =>
     inProcessStatuses.includes(application.status),
   ).length;
 
-  const latestApplication = applications[0] ?? null;
-
   const heroHeadline =
-    inProcessCount > 0
-      ? `${inProcessCount} application${
-          inProcessCount === 1 ? "" : "s"
+    activeApplicationsInMotionCount > 0
+      ? `${activeApplicationsInMotionCount} application${
+          activeApplicationsInMotionCount === 1 ? "" : "s"
         } actively moving through your pipeline.`
       : openTasksCount > 0
         ? `${openTasksCount} open task${
             openTasksCount === 1 ? "" : "s"
           } ready for your next session.`
-        : totalApplications > 0
+        : totalApplicationsCount > 0
           ? "Your search board is live and ready for the next move."
           : "Build a job search board that actually feels alive.";
 
-  const heroDescription = latestApplication
-    ? `Current focus: ${latestApplication.companyName} for ${latestApplication.roleTitle}. Keep the next step visible and the momentum steady.`
-    : "Track each role, save context as you go, and turn your pipeline into something you can actually manage day to day.";
+  const heroDescription =
+    "Use the board below to spot what needs attention, keep momentum visible, and make the next move obvious.";
 
   const dashboardStats = [
     {
       label: "Total Applications",
-      value: totalApplications,
+      value: totalApplicationsCount,
       subtitle: "Every opportunity in your tracker.",
       classes:
         "border-slate-200 bg-gradient-to-br from-white via-white to-slate-100/80",
@@ -259,11 +422,11 @@ export default async function DashboardPage() {
     },
     {
       label: "In Process",
-      value: inProcessCount,
-      subtitle: "Screens, interviews, and take-homes.",
+      value: pipelineApplicationsCount,
+      subtitle: "Active applications beyond the saved stage.",
       classes:
-        "border-violet-200 bg-gradient-to-br from-violet-50 via-white to-white",
-      iconClasses: "bg-violet-600 text-white",
+        "border-emerald-200 bg-gradient-to-br from-emerald-50/60 via-white to-white",
+      iconClasses: "bg-emerald-500 text-white",
       icon: <SparkIcon />,
     },
     {
@@ -276,7 +439,7 @@ export default async function DashboardPage() {
       icon: <SendIcon />,
     },
     {
-      label: "Calls",
+      label: "FollowUps",
       value: callUpsCount,
       subtitle: "Contacts tied to active opportunities.",
       classes:
@@ -286,10 +449,123 @@ export default async function DashboardPage() {
     },
   ];
 
+  const allTimelineItems = [
+    ...recentApplicationActivity.map((application) => ({
+      id: `application-${application.id}`,
+      kind: "application" as const,
+      title: application.archivedAt
+        ? "Application archived"
+        : new Date(application.updatedAt).getTime() >
+            new Date(application.createdAt).getTime()
+          ? "Application updated"
+          : "Application added",
+      description: application.archivedAt
+        ? `${application.companyName} - ${application.roleTitle} moved to archive`
+        : `${application.companyName} - ${application.roleTitle}`,
+      timestamp: application.updatedAt ?? application.createdAt,
+      meta: application.archivedAt ? "Closed" : formatLabel(application.status),
+      href: `/dashboard/applications/${application.id}`,
+      summaryLabel: application.archivedAt
+        ? `Archived ${application.companyName}`
+        : `Updated ${application.companyName}`,
+    })),
+    ...recentTaskActivity.map((task) => ({
+      id: `task-${task.id}`,
+      kind: "task" as const,
+      title: task.completed
+        ? task.application
+          ? "Task completed for application"
+          : "Task completed"
+        : task.application
+          ? "Task updated for application"
+          : "Task updated",
+      description: task.application
+        ? `${task.title} - ${task.application.companyName} - ${task.application.roleTitle}`
+        : task.title,
+      timestamp: task.updatedAt,
+      meta: task.completed ? "Completed" : "Open",
+      href: task.application
+        ? `/dashboard/applications/${task.application.id}`
+        : null,
+      summaryLabel: task.completed ? "Completed task" : "Updated task",
+    })),
+    ...recentFollowUpActivity.map((callUp) => ({
+      id: `call-up-${callUp.id}`,
+      kind: "call-up" as const,
+      title:
+        callUp.status === "DONE"
+          ? callUp.application
+            ? "FollowUp completed"
+            : "General FollowUp completed"
+          : callUp.application
+            ? "FollowUp logged"
+            : "General FollowUp logged",
+      description: callUp.contact
+        ? `${callUp.title} - ${callUp.contact.fullName}`
+        : callUp.title,
+      timestamp: callUp.updatedAt,
+      meta: formatLabel(callUp.status),
+      href: callUp.application
+        ? `/dashboard/applications/${callUp.application.id}`
+        : null,
+      summaryLabel:
+        callUp.status === "DONE" ? "Completed FollowUp" : "Updated FollowUp",
+    })),
+  ].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+
+  const timelineItems = allTimelineItems.slice(0, 12);
+  const latestActivity = allTimelineItems[0] ?? null;
+
+  const attentionCards = [
+    dueSoonTask
+      ? {
+          id: "attention-task",
+          label: "Due Soon",
+          title: dueSoonTask.title,
+          description: dueSoonTask.application
+            ? `${dueSoonTask.application.companyName} · ${dueSoonTask.application.roleTitle}`
+            : "Standalone task",
+          meta: dueSoonTask.dueDate
+            ? new Date(dueSoonTask.dueDate).toLocaleDateString()
+            : "No date",
+          classes:
+            "border-amber-200 bg-gradient-to-br from-amber-50/80 via-white to-white",
+        }
+      : null,
+    nextPlannedCall
+      ? {
+          id: "attention-call",
+          label: "Next FollowUp",
+          title: nextPlannedCall.title,
+          description: nextPlannedCall.application
+            ? `${nextPlannedCall.application.companyName} · ${nextPlannedCall.application.roleTitle}`
+            : "General FollowUp",
+          meta: nextPlannedCall.scheduledAt
+            ? new Date(nextPlannedCall.scheduledAt).toLocaleDateString()
+            : "No date",
+          classes:
+            "border-sky-200 bg-gradient-to-br from-sky-50/80 via-white to-white",
+        }
+      : null,
+    applicationWithoutNextStep
+      ? {
+          id: "attention-next-step",
+          label: "Missing Next Step",
+          title: applicationWithoutNextStep.companyName,
+          description: applicationWithoutNextStep.roleTitle,
+          meta: "No next step set",
+          classes:
+            "border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-white",
+        }
+      : null,
+  ].filter((item) => item !== null);
+
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-amber-50/60 to-sky-50/70 p-6 shadow-sm">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+      <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-amber-50/50 to-sky-50/60 p-6 shadow-sm">
+        <div className="flex flex-col gap-6">
           <div className="max-w-3xl">
             <p className="text-sm font-medium text-slate-500">Dashboard</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
@@ -300,43 +576,26 @@ export default async function DashboardPage() {
             </p>
             <p className="mt-2 text-sm text-slate-600">{heroDescription}</p>
 
-            <div className="mt-4 mb-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                {totalApplications} tracked
+                {totalApplicationsCount} tracked
               </span>
               <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                {inProcessCount} active
+                {pipelineApplicationsCount} in flow
               </span>
-              <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                {openTasksCount} tasks
-              </span>
-              {latestApplication ? (
+              {latestActivity ? (
                 <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                  Latest: {latestApplication.companyName}
+                  Latest: {latestActivity.summaryLabel}
                 </span>
               ) : null}
             </div>
 
-            <DashboardQuickActions
-              applications={applications}
-              contacts={contacts}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/dashboard/applications/new"
-              className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white shadow-sm"
-            >
-              New application
-            </Link>
-
-            <Link
-              href="/dashboard/applications"
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium shadow-sm"
-            >
-              View applications
-            </Link>
+            <div className="mt-5">
+              <DashboardQuickActions
+                applications={applications}
+                contacts={contacts}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -368,12 +627,53 @@ export default async function DashboardPage() {
         ))}
       </section>
 
+      {attentionCards.length > 0 ? (
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Needs Attention
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                The next things worth touching before they get lost.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+              {attentionCards.length} priorities
+            </span>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            {attentionCards.map((item) => (
+              <div
+                key={item.id}
+                className={`rounded-2xl border p-4 shadow-sm ${item.classes}`}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  {item.label}
+                </p>
+                <h3 className="mt-2 text-base font-semibold text-slate-950">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+                <p className="mt-3 text-xs font-medium text-slate-500">
+                  {item.meta}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <RecentApplicationsSection applications={applications} />
 
       <section className="grid gap-6 xl:grid-cols-2">
         <RecentTasksSection tasks={recentTasks} />
         <RecentCallUpsSection callUps={recentCallUps} />
       </section>
+
+      <DashboardActivityTimeline items={timelineItems} />
     </div>
   );
 }

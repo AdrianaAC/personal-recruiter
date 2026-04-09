@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -7,6 +8,14 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+function revalidateApplicationPaths(id: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/applications/archive");
+  revalidatePath(`/dashboard/applications/${id}`);
+  revalidatePath(`/dashboard/applications/${id}/edit`);
+}
 
 export async function POST(_: Request, context: RouteContext) {
   try {
@@ -54,6 +63,8 @@ export async function POST(_: Request, context: RouteContext) {
         id: true,
       },
     });
+
+    revalidateApplicationPaths(id);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

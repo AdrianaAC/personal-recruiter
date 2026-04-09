@@ -48,22 +48,22 @@ export function ApplicationCallUpList({
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">Call-Ups</h2>
+          <h2 className="text-lg font-semibold">FollowUps</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Follow-up outreach linked to this application.
+            FollowUp outreach linked to this application.
           </p>
         </div>
 
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-          {callUps.length} {callUps.length === 1 ? "call-up" : "call-ups"}
+          {callUps.length} {callUps.length === 1 ? "FollowUp" : "FollowUps"}
         </span>
       </div>
 
       {callUps.length === 0 ? (
         <div className="mt-6 rounded-xl border border-dashed border-gray-300 p-8 text-center">
-          <h3 className="text-base font-medium">No call-ups yet</h3>
+          <h3 className="text-base font-medium">No FollowUps yet</h3>
           <p className="mt-2 text-sm text-gray-600">
-            Add your first call-up for this application.
+            Add your first FollowUp for this application.
           </p>
         </div>
       ) : (
