@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDeferredValue, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 type RecentTask = {
   id: string;
   title: string;
   description: string | null;
   dueDate: string | Date | null;
-  updatedAt: string | Date;
   application: {
     id: string;
     companyName: string;
@@ -33,25 +32,19 @@ function formatDate(value: string | Date | null) {
   return new Date(value).toLocaleDateString();
 }
 
-function TaskCheckbox({ taskId }: { taskId: string }) {
-  const router = useRouter();
+function TaskCheckbox({
+  taskId,
+  onComplete,
+}: {
+  taskId: string;
+  onComplete: (taskId: string) => Promise<void>;
+}) {
   const [loading, setLoading] = useState(false);
 
   async function markComplete() {
     setLoading(true);
-
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-    });
-
+    await onComplete(taskId);
     setLoading(false);
-
-    if (!res.ok) {
-      alert("Failed to update task.");
-      return;
-    }
-
-    router.refresh();
   }
 
   return (
@@ -77,18 +70,25 @@ export function RecentTasksSection({
   viewHref = "/dashboard/tasks",
   viewLabel = "View tasks",
 }: RecentTasksSectionProps) {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [taskItems, setTaskItems] = useState(tasks);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const itemsPerPage = 5;
+
+  useEffect(() => {
+    setTaskItems(tasks);
+  }, [tasks]);
+
   const filteredTasks = useMemo(() => {
     const query = deferredSearchQuery.trim().toLowerCase();
 
     if (!query) {
-      return tasks;
+      return taskItems;
     }
 
-    return tasks.filter((task) => {
+    return taskItems.filter((task) => {
       const haystack = [
         task.title,
         task.description ?? "",
@@ -100,19 +100,48 @@ export function RecentTasksSection({
 
       return haystack.includes(query);
     });
-  }, [deferredSearchQuery, tasks]);
+  }, [deferredSearchQuery, taskItems]);
   const linkedTasksCount = useMemo(
-    () => tasks.filter((task) => task.application).length,
-    [tasks],
+    () => taskItems.filter((task) => task.application).length,
+    [taskItems],
   );
-  const standaloneTasksCount = tasks.length - linkedTasksCount;
+  const standaloneTasksCount = taskItems.length - linkedTasksCount;
   const totalPages = Math.max(1, Math.ceil(filteredTasks.length / itemsPerPage));
   const page = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    setCurrentPage((previousPage) => Math.min(previousPage, totalPages));
+  }, [totalPages]);
 
   const visibleTasks = useMemo(() => {
     const start = (page - 1) * itemsPerPage;
     return filteredTasks.slice(start, start + itemsPerPage);
   }, [filteredTasks, page]);
+
+  async function handleCompleteTask(taskId: string) {
+    const previousTasks = taskItems;
+
+    setTaskItems((currentTasks) =>
+      currentTasks.filter((task) => task.id !== taskId),
+    );
+
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update task.");
+      }
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setTaskItems(previousTasks);
+      alert("Failed to update task.");
+    }
+  }
 
   return (
     <section className="flex h-full flex-col rounded-3xl border-[3px] border-amber-400 bg-gradient-to-br from-amber-100 via-amber-50 to-white p-6 shadow-sm">
@@ -137,7 +166,7 @@ export function RecentTasksSection({
       <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-            {tasks.length} open
+            {taskItems.length} open
           </span>
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
             {linkedTasksCount} linked
@@ -179,10 +208,10 @@ export function RecentTasksSection({
       {filteredTasks.length === 0 ? (
         <div className="mt-6 flex-1 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center">
           <h3 className="text-lg font-medium text-slate-900">
-            {tasks.length === 0 ? "No open tasks" : "No matching tasks"}
+            {taskItems.length === 0 ? "No open tasks" : "No matching tasks"}
           </h3>
           <p className="mt-2 text-sm text-slate-600">
-            {tasks.length === 0
+            {taskItems.length === 0
               ? "Add tasks from the dashboard or attach them to applications."
               : "Try a different search to find the task you want."}
           </p>
@@ -206,7 +235,10 @@ export function RecentTasksSection({
                     </p>
                   </div>
 
-                  <TaskCheckbox taskId={task.id} />
+                  <TaskCheckbox
+                    taskId={task.id}
+                    onComplete={handleCompleteTask}
+                  />
                 </div>
 
                 {task.description ? (

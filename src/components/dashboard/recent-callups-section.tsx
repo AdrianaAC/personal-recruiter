@@ -2,23 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useDeferredValue, useMemo, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 
 type RecentCallUp = {
   id: string;
   title: string;
   notes: string | null;
   scheduledAt: string | Date | null;
-  status: "PLANNED" | "DONE" | "MISSED";
-  updatedAt: string | Date;
-  contact: {
-    id: string;
-    fullName: string;
-    email: string | null;
-    linkedinUrl: string | null;
-    companyName: string | null;
-    jobTitle: string | null;
-  } | null;
   application: {
     id: string;
     companyName: string;
@@ -42,25 +32,19 @@ function formatDate(value: string | Date | null) {
   return new Date(value).toLocaleDateString();
 }
 
-function CallUpCheckbox({ callUpId }: { callUpId: string }) {
-  const router = useRouter();
+function CallUpCheckbox({
+  callUpId,
+  onComplete,
+}: {
+  callUpId: string;
+  onComplete: (callUpId: string) => Promise<void>;
+}) {
   const [loading, setLoading] = useState(false);
 
   async function markComplete() {
     setLoading(true);
-
-    const res = await fetch(`/api/call-ups/${callUpId}`, {
-      method: "PATCH",
-    });
-
+    await onComplete(callUpId);
     setLoading(false);
-
-    if (!res.ok) {
-      alert("Failed to update FollowUp.");
-      return;
-    }
-
-    router.refresh();
   }
 
   return (
@@ -86,46 +70,78 @@ export function RecentCallUpsSection({
   viewHref = "/dashboard/call-ups",
   viewLabel = "View FollowUps",
 }: RecentCallUpsSectionProps) {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [followUpItems, setFollowUpItems] = useState(callUps);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const itemsPerPage = 5;
+
+  useEffect(() => {
+    setFollowUpItems(callUps);
+  }, [callUps]);
+
   const filteredCallUps = useMemo(() => {
     const query = deferredSearchQuery.trim().toLowerCase();
 
     if (!query) {
-      return callUps;
+      return followUpItems;
     }
 
-    return callUps.filter((callUp) => {
+    return followUpItems.filter((callUp) => {
       const haystack = [
         callUp.title,
         callUp.notes ?? "",
         callUp.application?.companyName ?? "",
         callUp.application?.roleTitle ?? "",
-        callUp.contact?.fullName ?? "",
       ]
         .join(" ")
         .toLowerCase();
 
       return haystack.includes(query);
     });
-  }, [callUps, deferredSearchQuery]);
+  }, [deferredSearchQuery, followUpItems]);
   const linkedCallUpsCount = useMemo(
-    () => callUps.filter((callUp) => callUp.application).length,
-    [callUps],
+    () => followUpItems.filter((callUp) => callUp.application).length,
+    [followUpItems],
   );
-  const plannedCallUpsCount = useMemo(
-    () => callUps.filter((callUp) => callUp.status === "PLANNED").length,
-    [callUps],
-  );
+  const standaloneCallUpsCount = followUpItems.length - linkedCallUpsCount;
   const totalPages = Math.max(1, Math.ceil(filteredCallUps.length / itemsPerPage));
   const page = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    setCurrentPage((previousPage) => Math.min(previousPage, totalPages));
+  }, [totalPages]);
 
   const visibleCallUps = useMemo(() => {
     const start = (page - 1) * itemsPerPage;
     return filteredCallUps.slice(start, start + itemsPerPage);
   }, [filteredCallUps, page]);
+
+  async function handleCompleteFollowUp(callUpId: string) {
+    const previousFollowUps = followUpItems;
+
+    setFollowUpItems((currentFollowUps) =>
+      currentFollowUps.filter((callUp) => callUp.id !== callUpId),
+    );
+
+    try {
+      const res = await fetch(`/api/call-ups/${callUpId}`, {
+        method: "PATCH",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update FollowUp.");
+      }
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      setFollowUpItems(previousFollowUps);
+      alert("Failed to update FollowUp.");
+    }
+  }
 
   return (
     <section className="flex h-full flex-col rounded-3xl border-[3px] border-sky-400 bg-gradient-to-br from-sky-100 via-sky-50 to-white p-6 shadow-sm">
@@ -150,13 +166,13 @@ export function RecentCallUpsSection({
       <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-            {callUps.length} tracked
-          </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-            {plannedCallUpsCount} planned
+            {followUpItems.length} tracked
           </span>
           <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
             {linkedCallUpsCount} linked
+          </span>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+            {standaloneCallUpsCount} standalone
           </span>
         </div>
 
@@ -192,10 +208,10 @@ export function RecentCallUpsSection({
       {filteredCallUps.length === 0 ? (
         <div className="mt-6 flex-1 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center">
           <h3 className="text-lg font-medium text-slate-900">
-            {callUps.length === 0 ? "No FollowUps yet" : "No matching FollowUps"}
+            {followUpItems.length === 0 ? "No FollowUps yet" : "No matching FollowUps"}
           </h3>
           <p className="mt-2 text-sm text-slate-600">
-            {callUps.length === 0
+            {followUpItems.length === 0
               ? "Add FollowUps from the dashboard and attach them to a real contact."
               : "Try a different search to find the FollowUp you want."}
           </p>
@@ -219,7 +235,10 @@ export function RecentCallUpsSection({
                     </p>
                   </div>
 
-                  <CallUpCheckbox callUpId={callUp.id} />
+                  <CallUpCheckbox
+                    callUpId={callUp.id}
+                    onComplete={handleCompleteFollowUp}
+                  />
                 </div>
 
                 {callUp.notes ? (

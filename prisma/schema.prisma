@@ -53,6 +53,7 @@ model JobApplication {
   @@index([userId])
   @@index([userId, status])
   @@index([userId, archivedAt])
+  @@index([userId, archivedAt, updatedAt])
 }
 
 model Interview {
@@ -105,6 +106,8 @@ model Task {
 
   @@index([userId])
   @@index([applicationId])
+  @@index([userId, archivedAt, completed, updatedAt])
+  @@index([userId, archivedAt, completed, dueDate])
 }
 
 model Contact {
@@ -149,6 +152,8 @@ model CallUp {
   @@index([userId])
   @@index([applicationId])
   @@index([contactId])
+  @@index([userId, archivedAt, updatedAt])
+  @@index([userId, archivedAt, status, scheduledAt])
 }
 
 model ApplicationContact {

@@ -7,6 +7,8 @@ import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-sect
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 import { DashboardActivityTimeline } from "@/components/dashboard/dashboard-activity-timeline";
 
+const RECENT_SECTION_LIMIT = 25;
+
 function BriefcaseIcon() {
   return (
     <svg
@@ -262,7 +264,6 @@ export default async function DashboardPage() {
         title: true,
         description: true,
         dueDate: true,
-        updatedAt: true,
         application: {
           select: {
             id: true,
@@ -271,6 +272,7 @@ export default async function DashboardPage() {
           },
         },
       },
+      take: RECENT_SECTION_LIMIT,
     }),
     prisma.callUp.findMany({
       where: {
@@ -288,18 +290,6 @@ export default async function DashboardPage() {
         title: true,
         notes: true,
         scheduledAt: true,
-        status: true,
-        updatedAt: true,
-        contact: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            linkedinUrl: true,
-            companyName: true,
-            jobTitle: true,
-          },
-        },
         application: {
           select: {
             id: true,
@@ -308,6 +298,7 @@ export default async function DashboardPage() {
           },
         },
       },
+      take: RECENT_SECTION_LIMIT,
     }),
     prisma.task.findFirst({
       where: {
