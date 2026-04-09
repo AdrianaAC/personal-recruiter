@@ -31,7 +31,10 @@ type ApplicationsListProps = {
   emphasizeDashboard?: boolean;
   showSupplementalTags?: boolean;
   showJobPostAction?: boolean;
+  showDeleteAction?: boolean;
+  showEditAction?: boolean;
   showArchiveAction?: boolean;
+  showCopyAction?: boolean;
   dateTagMode?: "created" | "updated";
 };
 
@@ -305,7 +308,10 @@ export function ApplicationsList({
   emphasizeDashboard = false,
   showSupplementalTags = false,
   showJobPostAction = false,
+  showDeleteAction = true,
+  showEditAction = true,
   showArchiveAction = true,
+  showCopyAction = true,
   dateTagMode = "created",
 }: ApplicationsListProps) {
   const router = useRouter();
@@ -355,6 +361,12 @@ export function ApplicationsList({
     normalizedQuery,
     shouldPaginate,
   ]);
+  const currentItemPosition =
+    filteredApplications.length === 0
+      ? 0
+      : shouldPaginate
+        ? (currentPage - 1) * itemsPerPage + 1
+        : 1;
 
   async function handleDelete(application: ApplicationListItem) {
     const confirmed = window.confirm(
@@ -593,51 +605,59 @@ export function ApplicationsList({
                   </a>
                 ) : null}
 
-                <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(application)}
-                    disabled={isBusy}
-                    aria-label={`Delete ${application.companyName}`}
-                    title="Delete application"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <TrashIcon />
-                  </button>
+                {showDeleteAction || showEditAction || showArchiveAction || showCopyAction ? (
+                  <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm">
+                    {showDeleteAction ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(application)}
+                        disabled={isBusy}
+                        aria-label={`Delete ${application.companyName}`}
+                        title="Delete application"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <TrashIcon />
+                      </button>
+                    ) : null}
 
-                  <Link
-                    href={`/dashboard/applications/${application.id}/edit`}
-                    aria-label={`Edit ${application.companyName}`}
-                    title="Edit application"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
-                  >
-                    <PencilIcon />
-                  </Link>
+                    {showEditAction ? (
+                      <Link
+                        href={`/dashboard/applications/${application.id}/edit`}
+                        aria-label={`Edit ${application.companyName}`}
+                        title="Edit application"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
+                      >
+                        <PencilIcon />
+                      </Link>
+                    ) : null}
 
-                  {showArchiveAction ? (
-                    <button
-                      type="button"
-                      onClick={() => handleArchive(application)}
-                      disabled={isBusy}
-                      aria-label={`Archive ${application.companyName}`}
-                      title="Archive application"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <ArchiveIcon />
-                    </button>
-                  ) : null}
+                    {showArchiveAction ? (
+                      <button
+                        type="button"
+                        onClick={() => handleArchive(application)}
+                        disabled={isBusy}
+                        aria-label={`Archive ${application.companyName}`}
+                        title="Archive application"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <ArchiveIcon />
+                      </button>
+                    ) : null}
 
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(application)}
-                    disabled={isBusy}
-                    aria-label={`Duplicate ${application.companyName}`}
-                    title="Duplicate application"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-gray-400 hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <CopyIcon />
-                  </button>
-                </div>
+                    {showCopyAction ? (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(application)}
+                        disabled={isBusy}
+                        aria-label={`Duplicate ${application.companyName}`}
+                        title="Duplicate application"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-gray-400 hover:bg-gray-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <CopyIcon />
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -657,7 +677,7 @@ export function ApplicationsList({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              {currentPage} of {totalPages}
+              {currentItemPosition} of {filteredApplications.length}
             </span>
 
             <button

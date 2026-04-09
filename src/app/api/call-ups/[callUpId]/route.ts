@@ -9,6 +9,16 @@ type RouteContext = {
   }>;
 };
 
+function revalidateCallUpPaths(applicationId?: string | null) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/archive");
+  revalidatePath("/dashboard/call-ups");
+
+  if (applicationId) {
+    revalidatePath(`/dashboard/applications/${applicationId}`);
+  }
+}
+
 export async function PATCH(_: Request, context: RouteContext) {
   try {
     const session = await auth();
@@ -43,12 +53,7 @@ export async function PATCH(_: Request, context: RouteContext) {
         },
     });
 
-    revalidatePath("/dashboard");
-    revalidatePath("/dashboard/call-ups");
-
-    if (updated.applicationId) {
-      revalidatePath(`/dashboard/applications/${updated.applicationId}`);
-    }
+    revalidateCallUpPaths(updated.applicationId);
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -78,6 +83,7 @@ export async function DELETE(_: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -90,6 +96,8 @@ export async function DELETE(_: Request, context: RouteContext) {
         id: callUpId,
       },
     });
+
+    revalidateCallUpPaths(existingCallUp.applicationId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

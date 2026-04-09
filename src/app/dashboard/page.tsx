@@ -264,6 +264,7 @@ export default async function DashboardPage() {
         title: true,
         description: true,
         dueDate: true,
+        updatedAt: true,
         application: {
           select: {
             id: true,

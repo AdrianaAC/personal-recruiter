@@ -11,6 +11,7 @@ type RouteContext = {
 
 function revalidateApplicationPaths(id: string) {
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/archive");
   revalidatePath("/dashboard/applications");
   revalidatePath("/dashboard/applications/archive");
   revalidatePath(`/dashboard/applications/${id}`);

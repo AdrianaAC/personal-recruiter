@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { createTaskSchema } from "@/lib/validations/task";
 
 type RouteContext = {
   params: Promise<{
@@ -9,7 +11,26 @@ type RouteContext = {
   }>;
 };
 
-export async function PATCH(_: Request, context: RouteContext) {
+async function readJsonSafely(request: Request) {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
+
+function revalidateTaskPaths(applicationId?: string | null) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/archive");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
+
+  if (applicationId) {
+    revalidatePath(`/dashboard/applications/${applicationId}`);
+  }
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -29,25 +50,67 @@ export async function PATCH(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  const updated = await prisma.task.update({
-    where: { id: taskId },
-    data: task.completed
-      ? {
-          completed: false,
-          archivedAt: null,
-        }
-      : {
-          completed: true,
-          archivedAt: new Date(),
+  const body = await readJsonSafely(request);
+  const hasEditPayload =
+    body &&
+    typeof body === "object" &&
+    Object.keys(body).length > 0;
+
+  let updated;
+
+  if (hasEditPayload) {
+    const parsed = createTaskSchema
+      .extend({
+        applicationId: z.string().optional().nullable().or(z.literal("")),
+      })
+      .safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid input",
+          details: parsed.error.flatten(),
         },
-  });
+        { status: 400 },
+      );
+    }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/tasks");
+    const data = parsed.data;
 
-  if (updated.applicationId) {
-    revalidatePath(`/dashboard/applications/${updated.applicationId}`);
+    updated = await prisma.task.update({
+      where: { id: taskId },
+      data: {
+        title: data.title,
+        description: data.description || null,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        applicationId:
+          typeof data.applicationId === "string" && data.applicationId.trim()
+            ? data.applicationId
+            : null,
+        ...(typeof data.completed === "boolean"
+          ? {
+              completed: data.completed,
+              archivedAt: data.completed ? new Date() : null,
+            }
+          : {}),
+      },
+    });
+  } else {
+    updated = await prisma.task.update({
+      where: { id: taskId },
+      data: task.completed
+        ? {
+            completed: false,
+            archivedAt: null,
+          }
+        : {
+            completed: true,
+            archivedAt: new Date(),
+          },
+    });
   }
+
+  revalidateTaskPaths(updated.applicationId);
 
   return NextResponse.json(updated);
 }
@@ -69,6 +132,7 @@ export async function DELETE(_: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -81,6 +145,8 @@ export async function DELETE(_: Request, context: RouteContext) {
         id: taskId,
       },
     });
+
+    revalidateTaskPaths(existingTask.applicationId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
