@@ -290,6 +290,7 @@ export default async function DashboardPage() {
       select: {
         id: true,
         title: true,
+        description: true,
         notes: true,
         scheduledAt: true,
         application: {

@@ -22,6 +22,7 @@ export async function POST(req: Request) {
 const callUp = await prisma.callUp.create({
   data: {
     title: body.title,
+    description: body.description || null,
     notes: body.notes,
     scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null,
     applicationId: body.applicationId || null,

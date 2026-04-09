@@ -138,6 +138,7 @@ model CallUp {
   applicationId String?
   contactId     String?
   title         String
+  description   String?
   notes         String?
   scheduledAt   DateTime?
   status        CallUpStatus @default(PLANNED)

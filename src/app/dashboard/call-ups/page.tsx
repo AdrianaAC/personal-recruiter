@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-section";
+import { RecentContactsSection } from "@/components/dashboard/recent-contacts-section";
 
 export default async function CallUpsPage() {
   const session = await auth();
@@ -25,6 +26,7 @@ export default async function CallUpsPage() {
     select: {
       id: true,
       title: true,
+      description: true,
       notes: true,
       scheduledAt: true,
       status: true,
@@ -49,16 +51,70 @@ export default async function CallUpsPage() {
     },
   });
 
+  const applications = await prisma.jobApplication.findMany({
+    where: {
+      userId: session.user.id,
+      archivedAt: null,
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+    select: {
+      id: true,
+      companyName: true,
+      roleTitle: true,
+    },
+  });
+
+  const contacts = await prisma.contact.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    orderBy: {
+      fullName: "asc",
+    },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      linkedinUrl: true,
+      companyName: true,
+      jobTitle: true,
+      notes: true,
+      updatedAt: true,
+      applications: {
+        take: 1,
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          application: {
+            select: {
+              id: true,
+              companyName: true,
+              roleTitle: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          applications: true,
+        },
+      },
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-slate-500">FollowUps</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-            All Recent FollowUps
+            FollowUps
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            FollowUps and warm contacts that are still in motion.
+            Everything that still needs a follow-up
           </p>
         </div>
 
@@ -82,8 +138,28 @@ export default async function CallUpsPage() {
       <RecentCallUpsSection
         callUps={callUps}
         title="FollowUps"
-        description="FollowUps and warm contacts that are still in motion."
+        description=""
         viewHref={null}
+        showAddCallUpAction
+        largeAddCallUpAction
+        enableCallUpEditing
+        showDeleteAction
+        showCopyAction
+        addCallUpApplications={applications}
+        addCallUpContacts={contacts}
+      />
+
+      <RecentContactsSection
+        contacts={contacts.map((contact) => ({
+          ...contact,
+          applicationLinksCount: contact._count.applications,
+        }))}
+        title="Contacts"
+        description="The people connected to your outreach and opportunities."
+        viewHref={null}
+        showAddContactAction
+        largeAddContactAction
+        enableContactEditing
       />
     </div>
   );

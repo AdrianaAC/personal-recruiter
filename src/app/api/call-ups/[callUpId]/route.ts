@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { createCallUpSchema } from "@/lib/validations/call-up";
 
 type RouteContext = {
   params: Promise<{
     callUpId: string;
   }>;
 };
+
+async function readJsonSafely(request: Request) {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
 
 function revalidateCallUpPaths(applicationId?: string | null) {
   revalidatePath("/dashboard");
@@ -19,7 +29,7 @@ function revalidateCallUpPaths(applicationId?: string | null) {
   }
 }
 
-export async function PATCH(_: Request, context: RouteContext) {
+export async function PATCH(request: Request, context: RouteContext) {
   try {
     const session = await auth();
 
@@ -40,18 +50,64 @@ export async function PATCH(_: Request, context: RouteContext) {
       return NextResponse.json({ error: "Call-up not found" }, { status: 404 });
     }
 
-    const updated = await prisma.callUp.update({
-      where: { id: callUpId },
-      data: callUp.archivedAt
-        ? {
-            archivedAt: null,
-            status: "PLANNED",
-          }
-        : {
-            archivedAt: new Date(),
-            status: "DONE",
+    const body = await readJsonSafely(request);
+    const hasEditPayload =
+      body &&
+      typeof body === "object" &&
+      Object.keys(body).length > 0;
+
+    let updated;
+
+    if (hasEditPayload) {
+      const parsed = createCallUpSchema
+        .extend({
+          applicationId: z.string().optional().nullable().or(z.literal("")),
+        })
+        .safeParse(body);
+
+      if (!parsed.success) {
+        return NextResponse.json(
+          {
+            error: "Invalid input",
+            details: parsed.error.flatten(),
+          },
+          { status: 400 },
+        );
+      }
+
+      const data = parsed.data;
+
+      updated = await prisma.callUp.update({
+        where: { id: callUpId },
+        data: {
+          title: data.title,
+          description: data.description || null,
+          notes: data.notes || null,
+          scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
+          applicationId:
+            typeof data.applicationId === "string" && data.applicationId.trim()
+              ? data.applicationId
+              : null,
+          contactId:
+            typeof data.contactId === "string" && data.contactId.trim()
+              ? data.contactId
+              : null,
         },
-    });
+      });
+    } else {
+      updated = await prisma.callUp.update({
+        where: { id: callUpId },
+        data: callUp.archivedAt
+          ? {
+              archivedAt: null,
+              status: "PLANNED",
+            }
+          : {
+              archivedAt: new Date(),
+              status: "DONE",
+            },
+      });
+    }
 
     revalidateCallUpPaths(updated.applicationId);
 
