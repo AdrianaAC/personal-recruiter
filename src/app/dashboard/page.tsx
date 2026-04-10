@@ -1,93 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { RecentApplicationsSection } from "@/components/dashboard/recent-applications-section";
-import { RecentTasksSection } from "@/components/dashboard/recent-tasks-section";
-import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-section";
-import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
-import { DashboardActivityTimeline } from "@/components/dashboard/dashboard-activity-timeline";
-import { DashboardAiFeedbackToggle } from "@/components/dashboard/dashboard-ai-feedback-toggle";
+import { DashboardPageSections } from "@/components/dashboard/dashboard-page-sections";
 
 const RECENT_SECTION_LIMIT = 25;
-
-function BriefcaseIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className="h-5 w-5"
-    >
-      <path
-        d="M4 9h16v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M9 9V7a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-      <path d="M4 13h16" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className="h-5 w-5"
-    >
-      <path d="M21 3L10 14" strokeLinecap="round" strokeLinejoin="round" />
-      <path
-        d="M21 3L14 21l-4-7-7-4 18-7Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className="h-5 w-5"
-    >
-      <path d="M12 3v5" strokeLinecap="round" />
-      <path d="m5.6 6.6 3.5 3.5" strokeLinecap="round" />
-      <path d="M3 12h5" strokeLinecap="round" />
-      <path d="m18.4 6.6-3.5 3.5" strokeLinecap="round" />
-      <path d="m8.5 15.5 3.5-8 3.5 8-3.5 5-3.5-5Z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className="h-5 w-5"
-    >
-      <path
-        d="M7.5 4h3l1.2 3.2-1.8 1.8a15 15 0 0 0 5 5l1.8-1.8L20 13.5v3A1.5 1.5 0 0 1 18.5 18C10.5 18 6 13.5 6 5.5A1.5 1.5 0 0 1 7.5 4Z"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function formatLabel(value: string) {
   return value
@@ -205,6 +121,7 @@ export default async function DashboardPage() {
         id: true,
         title: true,
         status: true,
+        createdAt: true,
         updatedAt: true,
         contact: {
           select: {
@@ -226,13 +143,38 @@ export default async function DashboardPage() {
         userId: session.user.id,
       },
       orderBy: {
-        fullName: "asc",
+        updatedAt: "desc",
       },
       select: {
         id: true,
         fullName: true,
+        email: true,
+        phone: true,
+        linkedinUrl: true,
         companyName: true,
         jobTitle: true,
+        notes: true,
+        updatedAt: true,
+        applications: {
+          take: 1,
+          orderBy: {
+            createdAt: "desc",
+          },
+          select: {
+            application: {
+              select: {
+                id: true,
+                companyName: true,
+                roleTitle: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            applications: true,
+          },
+        },
       },
     }),
     prisma.task.count({
@@ -293,6 +235,15 @@ export default async function DashboardPage() {
         description: true,
         notes: true,
         scheduledAt: true,
+        updatedAt: true,
+        contact: {
+          select: {
+            id: true,
+            fullName: true,
+            companyName: true,
+            jobTitle: true,
+          },
+        },
         application: {
           select: {
             id: true,
@@ -412,7 +363,7 @@ export default async function DashboardPage() {
       classes:
         "border-slate-200 bg-gradient-to-br from-white via-white to-slate-100/80",
       iconClasses: "bg-slate-900 text-white",
-      icon: <BriefcaseIcon />,
+      iconKey: "briefcase" as const,
     },
     {
       label: "In Process",
@@ -421,7 +372,7 @@ export default async function DashboardPage() {
       classes:
         "border-emerald-200 bg-gradient-to-br from-emerald-50/60 via-white to-white",
       iconClasses: "bg-emerald-500 text-white",
-      icon: <SparkIcon />,
+      iconKey: "spark" as const,
     },
     {
       label: "Tasks",
@@ -430,7 +381,7 @@ export default async function DashboardPage() {
       classes:
         "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white",
       iconClasses: "bg-amber-500 text-white",
-      icon: <SendIcon />,
+      iconKey: "send" as const,
     },
     {
       label: "FollowUps",
@@ -439,7 +390,7 @@ export default async function DashboardPage() {
       classes:
         "border-sky-200 bg-gradient-to-br from-sky-50 via-white to-white",
       iconClasses: "bg-sky-600 text-white",
-      icon: <PhoneIcon />,
+      iconKey: "phone" as const,
     },
   ];
 
@@ -491,9 +442,14 @@ export default async function DashboardPage() {
           ? callUp.application
             ? "FollowUp completed"
             : "General FollowUp completed"
-          : callUp.application
-            ? "FollowUp logged"
-            : "General FollowUp logged",
+          : new Date(callUp.updatedAt).getTime() >
+                new Date(callUp.createdAt).getTime()
+            ? callUp.application
+              ? "FollowUp updated"
+              : "General FollowUp updated"
+            : callUp.application
+              ? "FollowUp logged"
+              : "General FollowUp logged",
       description: callUp.contact
         ? `${callUp.title} - ${callUp.contact.fullName}`
         : callUp.title,
@@ -557,127 +513,34 @@ export default async function DashboardPage() {
   ].filter((item) => item !== null);
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-amber-50/50 to-sky-50/60 p-6 shadow-sm">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-sm font-medium text-slate-500">Dashboard</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-                Welcome back{session.user.name ? `, ${session.user.name}` : ""}.
-              </h1>
-              <p className="mt-3 text-lg font-medium text-slate-800">
-                {heroHeadline}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">{heroDescription}</p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                  {totalApplicationsCount} tracked
-                </span>
-                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                  {pipelineApplicationsCount} in flow
-                </span>
-                {latestActivity ? (
-                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                    Latest: {latestActivity.summaryLabel}
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="mt-5">
-                <DashboardQuickActions
-                  applications={applications}
-                  contacts={contacts}
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-start lg:justify-end">
-              <DashboardAiFeedbackToggle />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {dashboardStats.map((stat) => (
-          <div
-            key={stat.label}
-            className={`rounded-2xl border p-5 shadow-sm ${stat.classes}`}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  {stat.label}
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-slate-950">
-                  {stat.value}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">{stat.subtitle}</p>
-              </div>
-
-              <div
-                className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${stat.iconClasses}`}
-              >
-                {stat.icon}
-              </div>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {attentionCards.length > 0 ? (
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">
-                Needs Attention
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                The next things worth touching before they get lost.
-              </p>
-            </div>
-
-            <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-              {attentionCards.length} priorities
-            </span>
-          </div>
-
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
-            {attentionCards.map((item) => (
-              <div
-                key={item.id}
-                className={`rounded-2xl border p-4 shadow-sm ${item.classes}`}
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                  {item.label}
-                </p>
-                <h3 className="mt-2 text-base font-semibold text-slate-950">
-                  {item.title}
-                </h3>
-                <p className="mt-1 text-sm text-slate-600">{item.description}</p>
-                <p className="mt-3 text-xs font-medium text-slate-500">
-                  {item.meta}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <RecentApplicationsSection
-        applications={applications}
-        showDeleteAction={false}
-        showArchiveAction={false}
-      />
-
-      <section className="grid gap-6 xl:grid-cols-2">
-        <RecentTasksSection tasks={recentTasks} />
-        <RecentCallUpsSection callUps={recentCallUps} />
-      </section>
-
-      <DashboardActivityTimeline items={timelineItems} />
-    </div>
+    <DashboardPageSections
+      sessionUserName={session.user.name}
+      heroHeadline={heroHeadline}
+      heroDescription={heroDescription}
+      totalApplicationsCount={totalApplicationsCount}
+      pipelineApplicationsCount={pipelineApplicationsCount}
+      latestActivitySummaryLabel={latestActivity?.summaryLabel ?? null}
+      applications={applications}
+      quickActionApplications={applications.map((application) => ({
+        id: application.id,
+        companyName: application.companyName,
+        roleTitle: application.roleTitle,
+      }))}
+      quickActionContacts={contacts.map((contact) => ({
+        id: contact.id,
+        fullName: contact.fullName,
+        companyName: contact.companyName,
+        jobTitle: contact.jobTitle,
+      }))}
+      dashboardStats={dashboardStats}
+      attentionCards={attentionCards}
+      recentTasks={recentTasks}
+      recentFollowUps={recentCallUps}
+      recentContacts={contacts.map((contact) => ({
+        ...contact,
+        applicationLinksCount: contact._count.applications,
+      }))}
+      timelineItems={timelineItems}
+    />
   );
 }

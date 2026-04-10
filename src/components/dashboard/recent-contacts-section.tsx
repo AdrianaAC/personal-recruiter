@@ -181,6 +181,7 @@ export function RecentContactsSection({
   }, [filteredContacts, page]);
 
   const currentItemCount = visibleContacts.length;
+  const displayedItemCount = Math.min(page * itemsPerPage, filteredContacts.length);
 
   async function handleDeleteContact(contactId: string) {
     const contact = contactItems.find((item) => item.id === contactId);
@@ -637,6 +638,7 @@ export function RecentContactsSection({
 
             <span className="min-w-24 text-center font-medium text-slate-700">
               {currentItemCount} of {filteredContacts.length}
+              {displayedItemCount} of {filteredContacts.length}
             </span>
 
             <button
