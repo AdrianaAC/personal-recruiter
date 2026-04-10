@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { createNoteSchema } from "@/lib/validations/note";
 
@@ -8,6 +10,14 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+function revalidateApplicationPaths(id: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
+  revalidatePath("/dashboard/applications");
+  revalidatePath(`/dashboard/applications/${id}`);
+}
 
 export async function GET(_: Request, context: RouteContext) {
   try {
@@ -105,20 +115,28 @@ export async function POST(request: Request, context: RouteContext) {
 
     const data = parsed.data;
 
-    const note = await prisma.note.create({
-      data: {
-        applicationId,
-        title: data.title || null,
-        content: data.content,
-      },
-      select: {
-        id: true,
-        title: true,
-        content: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const note = await prisma.$transaction(async (tx) => {
+      const createdNote = await tx.note.create({
+        data: {
+          applicationId,
+          title: data.title || null,
+          content: data.content,
+        },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await syncApplicationWorkflowTask(tx, applicationId);
+
+      return createdNote;
     });
+
+    revalidateApplicationPaths(applicationId);
 
     return NextResponse.json(note, { status: 201 });
   } catch (error) {

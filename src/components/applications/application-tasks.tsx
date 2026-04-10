@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type Task = {
   id: string;
@@ -30,6 +30,16 @@ const initialFormState: TaskFormState = {
   dueDate: "",
 };
 
+function sortTasks(taskList: Task[]) {
+  return [...taskList].sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return Number(a.completed) - Number(b.completed);
+    }
+
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
 async function readJsonSafely(response: Response) {
   return response.json().catch(() => null);
 }
@@ -50,7 +60,7 @@ export function ApplicationTasks({
   initialTasks,
   extraContent,
 }: ApplicationTasksProps) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<Task[]>(() => sortTasks(initialTasks));
   const [form, setForm] = useState<TaskFormState>(initialFormState);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<TaskFormState>(initialFormState);
@@ -61,15 +71,9 @@ export function ApplicationTasks({
 
   const [error, setError] = useState<string | null>(null);
 
-  function sortTasks(taskList: Task[]) {
-    return [...taskList].sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return Number(a.completed) - Number(b.completed);
-      }
-
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }
+  useEffect(() => {
+    setTasks(sortTasks(initialTasks));
+  }, [initialTasks]);
 
   function startEdit(task: Task) {
     setEditingTaskId(task.id);

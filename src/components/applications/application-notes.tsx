@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Note = {
   id: string;
@@ -18,11 +19,13 @@ type ApplicationNotesProps = {
 type NoteFormState = {
   title: string;
   content: string;
+  marksAssessmentDelivered: boolean;
 };
 
 const initialFormState: NoteFormState = {
   title: "",
   content: "",
+  marksAssessmentDelivered: false,
 };
 
 function formatDate(value: string | Date) {
@@ -33,6 +36,7 @@ export function ApplicationNotes({
   applicationId,
   initialNotes,
 }: ApplicationNotesProps) {
+  const router = useRouter();
   const [notes, setNotes] = useState<Note[]>(initialNotes);
   const [form, setForm] = useState<NoteFormState>(initialFormState);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -44,11 +48,34 @@ export function ApplicationNotes({
 
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setNotes(initialNotes);
+  }, [initialNotes]);
+
+  function buildCreatePayload() {
+    const trimmedTitle = form.title.trim();
+
+    if (!form.marksAssessmentDelivered) {
+      return {
+        title: trimmedTitle,
+        content: form.content,
+      };
+    }
+
+    return {
+      title: trimmedTitle
+        ? `Assessment delivered: ${trimmedTitle}`
+        : "Assessment delivered",
+      content: form.content,
+    };
+  }
+
   function startEdit(note: Note) {
     setEditingNoteId(note.id);
     setEditForm({
       title: note.title ?? "",
       content: note.content,
+      marksAssessmentDelivered: false,
     });
     setError(null);
   }
@@ -70,7 +97,7 @@ export function ApplicationNotes({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(buildCreatePayload()),
       });
 
       const result = await response.json();
@@ -82,6 +109,7 @@ export function ApplicationNotes({
 
       setNotes((prev) => [result, ...prev]);
       setForm(initialFormState);
+      router.refresh();
     } catch (err) {
       console.error(err);
       setError("Something went wrong while creating the note.");
@@ -115,6 +143,7 @@ export function ApplicationNotes({
       );
       setEditingNoteId(null);
       setEditForm(initialFormState);
+      router.refresh();
     } catch (err) {
       console.error(err);
       setError("Something went wrong while updating the note.");
@@ -153,6 +182,8 @@ export function ApplicationNotes({
         setEditingNoteId(null);
         setEditForm(initialFormState);
       }
+
+      router.refresh();
     } catch (err) {
       console.error(err);
       setError("Something went wrong while deleting the note.");
@@ -202,6 +233,24 @@ export function ApplicationNotes({
               required
             />
           </div>
+
+          <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.marksAssessmentDelivered}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  marksAssessmentDelivered: e.target.checked,
+                }))
+              }
+              className="mt-0.5 h-4 w-4 rounded border-gray-300"
+            />
+            <span>
+              Mark this note as an assessment delivery so the workflow can
+              schedule next week&apos;s follow-up task.
+            </span>
+          </label>
 
           <button
             type="submit"
