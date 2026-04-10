@@ -1,7 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { DashboardContactQuickAdd } from "./dashboard-contact-quick-add";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
 
@@ -122,7 +128,9 @@ export function RecentContactsSection({
     id: string;
     label: string;
   } | null>(null);
-  const [editForm, setEditForm] = useState<ContactFormState>(initialContactFormState);
+  const [editForm, setEditForm] = useState<ContactFormState>(
+    initialContactFormState,
+  );
   const [initialEditForm, setInitialEditForm] = useState<ContactFormState>(
     initialContactFormState,
   );
@@ -168,7 +176,10 @@ export function RecentContactsSection({
     () => contactItems.filter((contact) => contact.linkedinUrl).length,
     [contactItems],
   );
-  const totalPages = Math.max(1, Math.ceil(filteredContacts.length / itemsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredContacts.length / itemsPerPage),
+  );
   const page = Math.min(currentPage, totalPages);
 
   useEffect(() => {
@@ -181,7 +192,10 @@ export function RecentContactsSection({
   }, [filteredContacts, page]);
 
   const currentItemCount = visibleContacts.length;
-  const displayedItemCount = Math.min(page * itemsPerPage, filteredContacts.length);
+  const displayedItemCount = Math.min(
+    page * itemsPerPage,
+    filteredContacts.length,
+  );
 
   async function handleDeleteContact(contactId: string) {
     const contact = contactItems.find((item) => item.id === contactId);
@@ -203,7 +217,9 @@ export function RecentContactsSection({
     const previousContacts = contactItems;
     setIsDeletingContact(true);
     setContactItems((currentContacts) =>
-      currentContacts.filter((contact) => contact.id !== pendingDeleteContact.id),
+      currentContacts.filter(
+        (contact) => contact.id !== pendingDeleteContact.id,
+      ),
     );
 
     try {
@@ -284,9 +300,9 @@ export function RecentContactsSection({
     }
 
     const changedFields = Object.fromEntries(
-      (Object.entries(editForm) as Array<[keyof ContactFormState, string]>).filter(
-        ([field, value]) => value !== initialEditForm[field],
-      ),
+      (
+        Object.entries(editForm) as Array<[keyof ContactFormState, string]>
+      ).filter(([field, value]) => value !== initialEditForm[field]),
     );
 
     if (Object.keys(changedFields).length === 0) {
@@ -325,7 +341,8 @@ export function RecentContactsSection({
                   jobTitle: updatedContact.jobTitle,
                   notes: updatedContact.notes,
                   updatedAt: updatedContact.updatedAt,
-                  applicationLinksCount: updatedContact.applications?.length ?? 0,
+                  applicationLinksCount:
+                    updatedContact.applications?.length ?? 0,
                   applications:
                     updatedContact.applications?.map(
                       (applicationLink: {
@@ -492,7 +509,9 @@ export function RecentContactsSection({
                           ) : null}
                         </span>
                       ))}
-                    {!contact.phone && !contact.email && !contact.linkedinUrl ? (
+                    {!contact.phone &&
+                    !contact.email &&
+                    !contact.linkedinUrl ? (
                       <span>No contact details</span>
                     ) : null}
                   </div>
@@ -629,7 +648,9 @@ export function RecentContactsSection({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
+              onClick={() =>
+                setCurrentPage((current) => Math.max(1, current - 1))
+              }
               disabled={page === 1}
               className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -637,7 +658,6 @@ export function RecentContactsSection({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              {currentItemCount} of {filteredContacts.length}
               {displayedItemCount} of {filteredContacts.length}
             </span>
 
@@ -677,7 +697,9 @@ export function RecentContactsSection({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 p-4 backdrop-blur-[3px]">
           <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-xl">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Edit Contact</h3>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Edit Contact
+              </h3>
               <p className="mt-1 text-sm text-slate-600">
                 Update the contact details and save your changes.
               </p>
@@ -685,7 +707,9 @@ export function RecentContactsSection({
 
             <div className="mt-5 space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Full name</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Full name
+                </label>
                 <input
                   type="text"
                   value={editForm.fullName}
@@ -701,7 +725,9 @@ export function RecentContactsSection({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Phone</label>
+                  <label className="text-sm font-medium text-slate-700">
+                    Phone
+                  </label>
                   <input
                     type="text"
                     value={editForm.phone}
@@ -716,7 +742,9 @@ export function RecentContactsSection({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Email</label>
+                  <label className="text-sm font-medium text-slate-700">
+                    Email
+                  </label>
                   <input
                     type="email"
                     value={editForm.email}
@@ -732,7 +760,9 @@ export function RecentContactsSection({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">LinkedIn URL</label>
+                <label className="text-sm font-medium text-slate-700">
+                  LinkedIn URL
+                </label>
                 <input
                   type="url"
                   value={editForm.linkedinUrl}
@@ -748,7 +778,9 @@ export function RecentContactsSection({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Company</label>
+                  <label className="text-sm font-medium text-slate-700">
+                    Company
+                  </label>
                   <input
                     type="text"
                     value={editForm.companyName}
@@ -763,7 +795,9 @@ export function RecentContactsSection({
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">Job title</label>
+                  <label className="text-sm font-medium text-slate-700">
+                    Job title
+                  </label>
                   <input
                     type="text"
                     value={editForm.jobTitle}
@@ -779,7 +813,9 @@ export function RecentContactsSection({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700">Notes</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Notes
+                </label>
                 <textarea
                   value={editForm.notes}
                   onChange={(event) =>
