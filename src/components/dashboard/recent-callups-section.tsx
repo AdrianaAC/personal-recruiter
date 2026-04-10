@@ -203,7 +203,7 @@ export function RecentCallUpsSection({
     return filteredCallUps.slice(start, start + itemsPerPage);
   }, [filteredCallUps, page]);
 
-  const currentItemCount = visibleCallUps.length;
+  const displayedItemCount = Math.min(page * itemsPerPage, filteredCallUps.length);
 
   async function handleCompleteFollowUp(callUpId: string) {
     const previousFollowUps = followUpItems;
@@ -456,7 +456,7 @@ export function RecentCallUpsSection({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              {currentItemCount} of {filteredCallUps.length}
+              {displayedItemCount} of {filteredCallUps.length}
             </span>
 
             <button

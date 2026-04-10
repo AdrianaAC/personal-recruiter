@@ -260,7 +260,7 @@ export function RecentTasksSection({
     return filteredTasks.slice(start, start + itemsPerPage);
   }, [filteredTasks, page]);
 
-  const currentItemCount = visibleTasks.length;
+  const displayedItemCount = Math.min(page * itemsPerPage, filteredTasks.length);
 
   async function handleCompleteTask(taskId: string) {
     const previousTasks = taskItems;
@@ -700,7 +700,7 @@ export function RecentTasksSection({
             </button>
 
             <span className="min-w-24 text-center font-medium text-slate-700">
-              {currentItemCount} of {filteredTasks.length}
+              {displayedItemCount} of {filteredTasks.length}
             </span>
 
             <button
