@@ -76,6 +76,7 @@ export default async function ArchivePage() {
       select: {
         id: true,
         title: true,
+        description: true,
         notes: true,
         scheduledAt: true,
         updatedAt: true,
