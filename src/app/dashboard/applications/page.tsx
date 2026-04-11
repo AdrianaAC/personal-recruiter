@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getApplicationNextStepStatus } from "@/lib/application-next-step";
 import { getApplicationStaleness } from "@/lib/application-staleness";
+import { syncUserApplicationWorkflowTasks } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { ApplicationsList } from "@/components/applications/applications-list";
 
@@ -11,6 +13,8 @@ export default async function ApplicationsPage() {
   if (!session?.user?.id) {
     redirect("/login");
   }
+
+  await syncUserApplicationWorkflowTasks(prisma, session.user.id);
 
   const applications = await prisma.jobApplication.findMany({
     where: {
@@ -33,9 +37,22 @@ export default async function ApplicationsPage() {
       updatedAt: true,
       interviews: {
         select: {
+          outcome: true,
           scheduledAt: true,
           createdAt: true,
           updatedAt: true,
+        },
+      },
+      tasks: {
+        select: {
+          completed: true,
+          archivedAt: true,
+        },
+      },
+      callUps: {
+        select: {
+          status: true,
+          archivedAt: true,
         },
       },
       notes: {
@@ -48,11 +65,17 @@ export default async function ApplicationsPage() {
   });
 
   const applicationsWithStaleness = applications.map((application) => {
-    const { interviews, notes, ...applicationSummary } = application;
+    const { interviews, notes, tasks, callUps, ...applicationSummary } = application;
     const staleness = getApplicationStaleness({
       ...applicationSummary,
       interviews,
       notes,
+    });
+    const nextStepStatus = getApplicationNextStepStatus({
+      ...applicationSummary,
+      interviews,
+      tasks,
+      callUps,
     });
 
     return {
@@ -61,6 +84,8 @@ export default async function ApplicationsPage() {
       staleLabel: staleness?.label ?? null,
       staleDescription: staleness?.description ?? null,
       staleWeeks: staleness?.weeksSinceActivity ?? null,
+      missingNextStepDetected: nextStepStatus.isMissingNextStep,
+      missingNextStepMessage: nextStepStatus.message,
     };
   });
 

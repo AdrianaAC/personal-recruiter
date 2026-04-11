@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getApplicationNextStepStatus } from "@/lib/application-next-step";
 import { getApplicationStaleness } from "@/lib/application-staleness";
 import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
@@ -130,6 +131,7 @@ export default async function ApplicationDetailPage({
       )[0] ?? null;
 
   const staleness = getApplicationStaleness(application);
+  const nextStepStatus = getApplicationNextStepStatus(application);
 
   const timelineItems = [
     {
@@ -251,6 +253,12 @@ export default async function ApplicationDetailPage({
                 {staleness.label}
               </span>
             ) : null}
+
+            {nextStepStatus.isMissingNextStep ? (
+              <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-800 ring-1 ring-amber-200">
+                Missing next step
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -263,6 +271,8 @@ export default async function ApplicationDetailPage({
             ? `${staleness.description} Consider nudging or archiving if it stays quiet.`
             : null
         }
+        missingNextStepDetected={nextStepStatus.isMissingNextStep}
+        missingNextStepMessage={nextStepStatus.message}
         notesCount={application.notes.length}
         openTasksCount={openTasksCount}
         completedTasksCount={completedTasksCount}
@@ -390,8 +400,16 @@ export default async function ApplicationDetailPage({
 
           <div className="mt-6">
             <h3 className="text-sm font-medium text-gray-500">Next Step</h3>
-            <div className="mt-2 rounded-lg bg-gray-50 p-4 text-sm text-gray-800">
-              {application.nextStep || "No next step defined yet."}
+            <div
+              className={`mt-2 rounded-lg p-4 text-sm ${
+                nextStepStatus.isMissingNextStep
+                  ? "border border-amber-200 bg-amber-50 text-amber-900"
+                  : "bg-gray-50 text-gray-800"
+              }`}
+            >
+              {application.nextStep ||
+                nextStepStatus.message ||
+                "No next step defined yet."}
             </div>
           </div>
 

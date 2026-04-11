@@ -17,6 +17,7 @@ type SummaryApplication = {
   createdAt: string | Date;
   nextStep?: string | null;
   staleLevel?: ApplicationStalenessLevel | null;
+  missingNextStepDetected?: boolean;
   interviews?: SummaryInterview[];
   notes?: SummaryNote[];
 };
@@ -174,7 +175,7 @@ export function getDashboardWeeklySummary(
     return (
       createdAt.getTime() >= weekStart.getTime() &&
       createdAt.getTime() <= weekEnd.getTime() &&
-      !application.nextStep?.trim()
+      (application.missingNextStepDetected || !application.nextStep?.trim())
     );
   });
 

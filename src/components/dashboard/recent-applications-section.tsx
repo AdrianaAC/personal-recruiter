@@ -48,7 +48,11 @@ export function RecentApplicationsSection({
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const missingNextStepCount = useMemo(
-    () => applications.filter((item) => !item.nextStep?.trim()).length,
+    () =>
+      applications.filter(
+        (item) =>
+          item.missingNextStepDetected || !item.nextStep?.trim(),
+      ).length,
     [applications],
   );
   const activeCount = useMemo(

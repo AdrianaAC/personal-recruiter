@@ -21,6 +21,8 @@ export type ApplicationListItem = {
   staleLabel?: string | null;
   staleDescription?: string | null;
   staleWeeks?: number | null;
+  missingNextStepDetected?: boolean;
+  missingNextStepMessage?: string | null;
 };
 
 type ApplicationsListProps = {
@@ -278,6 +280,13 @@ function actionKey(id: string, action: "archive" | "copy" | "delete") {
 }
 
 function getActivityCopy(application: ApplicationListItem) {
+  if (application.missingNextStepDetected) {
+    return (
+      application.missingNextStepMessage ??
+      "This application has no next step defined."
+    );
+  }
+
   if (application.nextStep) {
     return `Next up: ${application.nextStep}`;
   }
@@ -328,6 +337,7 @@ function matchesApplication(
       : "",
     application.staleLabel ?? "",
     application.staleDescription ?? "",
+    application.missingNextStepMessage ?? "",
   ];
 
   return searchableFields.some((field) =>
@@ -633,6 +643,12 @@ export function ApplicationsList({
                     {application.staleWeeks
                       ? ` · ${application.staleWeeks}w quiet`
                       : ""}
+                  </span>
+                ) : null}
+
+                {application.missingNextStepDetected ? (
+                  <span className="rounded-full bg-amber-50 px-2 py-1 font-medium text-amber-800 ring-1 ring-amber-200">
+                    Missing next step
                   </span>
                 ) : null}
 

@@ -2,6 +2,8 @@ type ApplicationSummaryCardsProps = {
   status: string | null;
   stalenessLabel?: string | null;
   stalenessHelper?: string | null;
+  missingNextStepDetected?: boolean;
+  missingNextStepMessage?: string | null;
   notesCount: number;
   openTasksCount: number;
   completedTasksCount: number;
@@ -31,6 +33,8 @@ export function ApplicationSummaryCards({
   status,
   stalenessLabel,
   stalenessHelper,
+  missingNextStepDetected,
+  missingNextStepMessage,
   notesCount,
   openTasksCount,
   completedTasksCount,
@@ -45,8 +49,13 @@ export function ApplicationSummaryCards({
     },
     {
       title: "Attention",
-      value: stalenessLabel ?? "Fresh",
-      helper: stalenessHelper ?? "Recent meaningful activity is still visible.",
+      value: missingNextStepDetected
+        ? "Missing next step"
+        : stalenessLabel ?? "Fresh",
+      helper:
+        missingNextStepMessage ??
+        stalenessHelper ??
+        "Recent meaningful activity is still visible.",
     },
     {
       title: "Notes",

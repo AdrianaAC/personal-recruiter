@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getApplicationNextStepStatus } from "@/lib/application-next-step";
 import { getDashboardConflictAlerts } from "@/lib/dashboard-conflicts";
 import { getApplicationStaleness } from "@/lib/application-staleness";
 import { syncUserApplicationWorkflowTasks } from "@/lib/application-workflow";
@@ -49,7 +50,6 @@ export default async function DashboardPage() {
     weeklyFollowUpTasks,
     dueSoonTask,
     nextPlannedCall,
-    applicationWithoutNextStep,
   ] = await Promise.all([
     prisma.user.findUnique({
       where: {
@@ -88,6 +88,18 @@ export default async function DashboardPage() {
             outcome: true,
             createdAt: true,
             updatedAt: true,
+          },
+        },
+        tasks: {
+          select: {
+            completed: true,
+            archivedAt: true,
+          },
+        },
+        callUps: {
+          select: {
+            status: true,
+            archivedAt: true,
           },
         },
         notes: {
@@ -379,28 +391,6 @@ export default async function DashboardPage() {
         },
       },
     }),
-    prisma.jobApplication.findFirst({
-      where: {
-        userId: session.user.id,
-        archivedAt: null,
-        OR: [
-          {
-            nextStep: null,
-          },
-          {
-            nextStep: "",
-          },
-        ],
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-      select: {
-        id: true,
-        companyName: true,
-        roleTitle: true,
-      },
-    }),
   ]);
 
   const inProcessStatuses = [
@@ -411,11 +401,17 @@ export default async function DashboardPage() {
   ];
 
   const applicationsWithStaleness = applications.map((application) => {
-    const { interviews, notes, ...applicationSummary } = application;
+    const { interviews, notes, tasks, callUps, ...applicationSummary } = application;
     const staleness = getApplicationStaleness({
       ...applicationSummary,
       interviews,
       notes,
+    });
+    const nextStepStatus = getApplicationNextStepStatus({
+      ...applicationSummary,
+      interviews,
+      tasks,
+      callUps,
     });
 
     return {
@@ -424,6 +420,8 @@ export default async function DashboardPage() {
       staleLabel: staleness?.label ?? null,
       staleDescription: staleness?.description ?? null,
       staleWeeks: staleness?.weeksSinceActivity ?? null,
+      missingNextStepDetected: nextStepStatus.isMissingNextStep,
+      missingNextStepMessage: nextStepStatus.message,
     };
   });
   const conflictAlerts = getDashboardConflictAlerts(applications);
@@ -454,6 +452,10 @@ export default async function DashboardPage() {
   const activeApplicationsInMotionCount = applicationsWithStaleness.filter(
     (application) => inProcessStatuses.includes(application.status),
   ).length;
+  const applicationWithoutNextStep =
+    applicationsWithStaleness.find(
+      (application) => application.missingNextStepDetected,
+    ) ?? null;
 
   const heroHeadline =
     activeApplicationsInMotionCount > 0
@@ -653,13 +655,15 @@ export default async function DashboardPage() {
             "border-sky-200 bg-gradient-to-br from-sky-50/80 via-white to-white",
         }
       : null,
-    applicationWithoutNextStep
+      applicationWithoutNextStep
       ? {
           id: "attention-next-step",
           label: "Missing Next Step",
           title: applicationWithoutNextStep.companyName,
           description: applicationWithoutNextStep.roleTitle,
-          meta: "No next step set",
+          meta:
+            applicationWithoutNextStep.missingNextStepMessage ??
+            "This application has no next step defined.",
           classes:
             "border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-white",
         }
