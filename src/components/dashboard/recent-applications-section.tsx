@@ -55,14 +55,44 @@ export function RecentApplicationsSection({
     () => applications.filter((item) => item.status !== "SAVED").length,
     [applications],
   );
+  const needsAttentionCount = useMemo(
+    () => applications.filter((item) => item.staleLevel !== null && item.staleLevel !== undefined).length,
+    [applications],
+  );
+  const probablyInactiveCount = useMemo(
+    () =>
+      applications.filter(
+        (item) => item.staleLevel === "stale" || item.staleLevel === "archive",
+      ).length,
+    [applications],
+  );
+  const archiveSuggestionCount = useMemo(
+    () => applications.filter((item) => item.staleLevel === "archive").length,
+    [applications],
+  );
   const resolvedSummaryChips = useMemo(
     () =>
       summaryChips ?? [
         { value: applications.length, label: "tracked here" },
-        { value: activeCount, label: "active" },
-        { value: missingNextStepCount, label: "missing next step" },
+        needsAttentionCount > 0
+          ? { value: needsAttentionCount, label: "need attention" }
+          : { value: activeCount, label: "active" },
+        probablyInactiveCount > 0
+          ? { value: probablyInactiveCount, label: "probably inactive" }
+          : { value: missingNextStepCount, label: "missing next step" },
+        ...(archiveSuggestionCount > 0
+          ? [{ value: archiveSuggestionCount, label: "suggest archive" }]
+          : []),
       ],
-    [activeCount, applications.length, missingNextStepCount, summaryChips],
+    [
+      activeCount,
+      applications.length,
+      archiveSuggestionCount,
+      missingNextStepCount,
+      needsAttentionCount,
+      probablyInactiveCount,
+      summaryChips,
+    ],
   );
 
   return (

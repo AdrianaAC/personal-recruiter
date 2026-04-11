@@ -1,5 +1,7 @@
 type ApplicationSummaryCardsProps = {
   status: string | null;
+  stalenessLabel?: string | null;
+  stalenessHelper?: string | null;
   notesCount: number;
   openTasksCount: number;
   completedTasksCount: number;
@@ -27,6 +29,8 @@ function getStatusLabel(status: string | null) {
 
 export function ApplicationSummaryCards({
   status,
+  stalenessLabel,
+  stalenessHelper,
   notesCount,
   openTasksCount,
   completedTasksCount,
@@ -38,6 +42,11 @@ export function ApplicationSummaryCards({
       title: "Status",
       value: getStatusLabel(status),
       helper: "Current application stage",
+    },
+    {
+      title: "Attention",
+      value: stalenessLabel ?? "Fresh",
+      helper: stalenessHelper ?? "Recent meaningful activity is still visible.",
     },
     {
       title: "Notes",

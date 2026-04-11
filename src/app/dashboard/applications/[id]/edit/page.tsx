@@ -34,6 +34,7 @@ export default async function EditApplicationPage({
       workMode: true,
       jobUrl: true,
       jobDescription: true,
+      offerExpiresAt: true,
       status: true,
       priority: true,
     },

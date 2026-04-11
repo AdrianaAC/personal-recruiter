@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { syncUserApplicationWorkflowTasks } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { RecentTasksSection } from "@/components/dashboard/recent-tasks-section";
 
@@ -10,6 +11,8 @@ export default async function TasksPage() {
   if (!session?.user?.id) {
     redirect("/login");
   }
+
+  await syncUserApplicationWorkflowTasks(prisma, session.user.id);
 
   const tasks = await prisma.task.findMany({
     where: {
@@ -22,6 +25,8 @@ export default async function TasksPage() {
     },
     select: {
       id: true,
+      origin: true,
+      snoozedUntil: true,
       title: true,
       description: true,
       dueDate: true,

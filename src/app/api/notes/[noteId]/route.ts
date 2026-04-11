@@ -39,6 +39,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       select: {
         id: true,
         applicationId: true,
+        assessmentSubmittedAt: true,
       },
     });
 
@@ -69,11 +70,19 @@ export async function PATCH(request: Request, context: RouteContext) {
         data: {
           title: data.title || null,
           content: data.content,
+          assessmentDueDate: data.assessmentDueDate
+            ? new Date(data.assessmentDueDate)
+            : null,
+          assessmentSubmittedAt: data.assessmentSubmitted
+            ? (existingNote.assessmentSubmittedAt ?? new Date())
+            : null,
         },
         select: {
           id: true,
           title: true,
           content: true,
+          assessmentDueDate: true,
+          assessmentSubmittedAt: true,
           createdAt: true,
           updatedAt: true,
         },

@@ -16,6 +16,7 @@ type EditableApplication = {
   workMode: "REMOTE" | "HYBRID" | "ONSITE" | null;
   jobUrl: string | null;
   jobDescription: string | null;
+  offerExpiresAt: string | Date | null;
   status:
     | "SAVED"
     | "APPLIED"
@@ -36,6 +37,7 @@ type FormState = {
   workMode: "" | "REMOTE" | "HYBRID" | "ONSITE";
   jobUrl: string;
   jobDescription: string;
+  offerExpiresAt: string;
   status:
     | "SAVED"
     | "APPLIED"
@@ -64,6 +66,9 @@ export function EditApplicationForm({ application }: EditApplicationFormProps) {
     workMode: application.workMode ?? "",
     jobUrl: application.jobUrl ?? "",
     jobDescription: application.jobDescription ?? "",
+    offerExpiresAt: application.offerExpiresAt
+      ? new Date(application.offerExpiresAt).toISOString().split("T")[0]
+      : "",
     status: application.status,
     priority: application.priority,
   });
@@ -97,6 +102,7 @@ export function EditApplicationForm({ application }: EditApplicationFormProps) {
           workMode: form.workMode || null,
           jobUrl: form.jobUrl,
           jobDescription: form.jobDescription,
+          offerExpiresAt: form.offerExpiresAt,
           status: form.status,
           priority: form.priority,
         }),
@@ -250,6 +256,19 @@ export function EditApplicationForm({ application }: EditApplicationFormProps) {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="offerExpiresAt" className="text-sm font-medium">
+            Offer expiration
+          </label>
+          <input
+            id="offerExpiresAt"
+            type="date"
+            value={form.offerExpiresAt}
+            onChange={(e) => updateField("offerExpiresAt", e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+          />
         </div>
 
         <div className="space-y-2">

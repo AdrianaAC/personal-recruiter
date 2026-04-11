@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getApplicationStaleness } from "@/lib/application-staleness";
 import { prisma } from "@/lib/prisma";
 import { ApplicationsList } from "@/components/applications/applications-list";
 
@@ -29,7 +30,38 @@ export default async function ApplicationsPage() {
       priority: true,
       jobUrl: true,
       createdAt: true,
+      updatedAt: true,
+      interviews: {
+        select: {
+          scheduledAt: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
+      notes: {
+        select: {
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
     },
+  });
+
+  const applicationsWithStaleness = applications.map((application) => {
+    const { interviews, notes, ...applicationSummary } = application;
+    const staleness = getApplicationStaleness({
+      ...applicationSummary,
+      interviews,
+      notes,
+    });
+
+    return {
+      ...applicationSummary,
+      staleLevel: staleness?.level ?? null,
+      staleLabel: staleness?.label ?? null,
+      staleDescription: staleness?.description ?? null,
+      staleWeeks: staleness?.weeksSinceActivity ?? null,
+    };
   });
 
   return (
@@ -69,7 +101,7 @@ export default async function ApplicationsPage() {
       </div>
 
       <ApplicationsList
-        initialApplications={applications}
+        initialApplications={applicationsWithStaleness}
         emptyTitle="No applications yet"
         emptyDescription="Start by saving your first opportunity."
         emptyActionHref="/dashboard/applications/new"

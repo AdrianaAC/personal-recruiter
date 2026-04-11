@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { createTaskSchema } from "@/lib/validations/task";
 
@@ -28,6 +29,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -50,30 +52,41 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const data = parsed.data;
 
-    const updatedTask = await prisma.task.update({
-      where: {
-        id: taskId,
-      },
-      data: {
-        title: data.title,
-        description: data.description || null,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        ...(typeof data.completed === "boolean"
-          ? {
-              completed: data.completed,
-              archivedAt: data.completed ? new Date() : null,
-            }
-          : {}),
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        dueDate: true,
-        completed: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const updatedTask = await prisma.$transaction(async (tx) => {
+      const nextTask = await tx.task.update({
+        where: {
+          id: taskId,
+        },
+        data: {
+          title: data.title,
+          description: data.description || null,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          snoozedUntil: data.snoozedUntil ? new Date(data.snoozedUntil) : null,
+          ...(typeof data.completed === "boolean"
+            ? {
+                completed: data.completed,
+                archivedAt: data.completed ? new Date() : null,
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+          origin: true,
+          snoozedUntil: true,
+          title: true,
+          description: true,
+          dueDate: true,
+          completed: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (existingTask.applicationId) {
+        await syncApplicationWorkflowTask(tx, existingTask.applicationId);
+      }
+
+      return nextTask;
     });
 
     return NextResponse.json(updatedTask, { status: 200 });

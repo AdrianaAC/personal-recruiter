@@ -57,6 +57,8 @@ export async function GET(_: Request, context: RouteContext) {
         id: true,
         title: true,
         content: true,
+        assessmentDueDate: true,
+        assessmentSubmittedAt: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -121,11 +123,17 @@ export async function POST(request: Request, context: RouteContext) {
           applicationId,
           title: data.title || null,
           content: data.content,
+          assessmentDueDate: data.assessmentDueDate
+            ? new Date(data.assessmentDueDate)
+            : null,
+          assessmentSubmittedAt: data.assessmentSubmitted ? new Date() : null,
         },
         select: {
           id: true,
           title: true,
           content: true,
+          assessmentDueDate: true,
+          assessmentSubmittedAt: true,
           createdAt: true,
           updatedAt: true,
         },

@@ -13,6 +13,7 @@ model User {
   name         String?
   email        String           @unique
   passwordHash String?
+  autoThankYouReminderEnabled Boolean @default(true)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   applications JobApplication[]
@@ -38,6 +39,8 @@ model JobApplication {
   priority       Priority          @default(MEDIUM)
   archivedAt     DateTime?
   appliedAt      DateTime?
+  offerReceivedAt DateTime?
+  offerExpiresAt DateTime?
   nextStep       String?
   notesSummary   String?
   createdAt      DateTime          @default(now())
@@ -81,6 +84,8 @@ model Note {
   applicationId String
   title         String?
   content       String
+  assessmentDueDate DateTime?
+  assessmentSubmittedAt DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -90,16 +95,22 @@ model Note {
 }
 
 model Task {
-  id            String    @id @default(cuid())
-  userId        String
-  applicationId String?
-  title         String
-  description   String?
-  dueDate       DateTime?
-  completed     Boolean   @default(false)
-  archivedAt    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String                @id @default(cuid())
+  userId            String
+  applicationId     String?
+  origin            TaskOrigin            @default(manual)
+  snoozedUntil      DateTime?
+  workflowSourceId  String?
+  workflowStage     TaskWorkflowStage?
+  workflowEventKind TaskWorkflowEventKind?
+  workflowEventAt   DateTime?
+  title             String
+  description       String?
+  dueDate           DateTime?
+  completed         Boolean               @default(false)
+  archivedAt        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   application JobApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
@@ -228,4 +239,35 @@ enum CallUpStatus {
   PLANNED
   DONE
   MISSED
+}
+
+enum TaskOrigin {
+  manual
+  auto_followup
+  auto_prep
+  auto_deadline
+  auto_review
+}
+
+enum TaskWorkflowEventKind {
+  application
+  interview
+  assessment
+  offer
+}
+
+enum TaskWorkflowStage {
+  initial
+  final
+  assessment_due_3d
+  assessment_due_1d
+  assessment_overdue
+  interview_prep_lead
+  interview_prep_day_of
+  interview_reflection
+  interview_thank_you
+  offer_review
+  offer_expiration_3d
+  offer_expiration_1d
+  offer_expired
 }

@@ -7,6 +7,8 @@ type Note = {
   id: string;
   title: string | null;
   content: string;
+  assessmentDueDate: string | Date | null;
+  assessmentSubmittedAt: string | Date | null;
   createdAt: string | Date;
   updatedAt: string | Date;
 };
@@ -19,17 +21,58 @@ type ApplicationNotesProps = {
 type NoteFormState = {
   title: string;
   content: string;
-  marksAssessmentDelivered: boolean;
+  tracksAssessment: boolean;
+  assessmentDueDate: string;
+  assessmentSubmitted: boolean;
 };
 
 const initialFormState: NoteFormState = {
   title: "",
   content: "",
-  marksAssessmentDelivered: false,
+  tracksAssessment: false,
+  assessmentDueDate: "",
+  assessmentSubmitted: false,
 };
 
 function formatDate(value: string | Date) {
   return new Date(value).toLocaleDateString();
+}
+
+function toDateInputValue(value: string | Date | null) {
+  if (!value) {
+    return "";
+  }
+
+  return new Date(value).toISOString().split("T")[0];
+}
+
+function isAssessmentNote(note: Note) {
+  if (note.assessmentDueDate || note.assessmentSubmittedAt) {
+    return true;
+  }
+
+  const normalizedText = `${note.title ?? ""} ${note.content}`.toLowerCase();
+  return /assessment|take[\s-]?home/.test(normalizedText);
+}
+
+function isAssessmentOverdue(note: Note) {
+  if (!note.assessmentDueDate || note.assessmentSubmittedAt) {
+    return false;
+  }
+
+  return Date.now() > new Date(note.assessmentDueDate).getTime();
+}
+
+function buildNotePayload(form: NoteFormState) {
+  return {
+    title: form.title.trim(),
+    content: form.content,
+    assessmentDueDate:
+      form.tracksAssessment && form.assessmentDueDate
+        ? form.assessmentDueDate
+        : "",
+    assessmentSubmitted: form.tracksAssessment && form.assessmentSubmitted,
+  };
 }
 
 export function ApplicationNotes({
@@ -52,30 +95,14 @@ export function ApplicationNotes({
     setNotes(initialNotes);
   }, [initialNotes]);
 
-  function buildCreatePayload() {
-    const trimmedTitle = form.title.trim();
-
-    if (!form.marksAssessmentDelivered) {
-      return {
-        title: trimmedTitle,
-        content: form.content,
-      };
-    }
-
-    return {
-      title: trimmedTitle
-        ? `Assessment delivered: ${trimmedTitle}`
-        : "Assessment delivered",
-      content: form.content,
-    };
-  }
-
   function startEdit(note: Note) {
     setEditingNoteId(note.id);
     setEditForm({
       title: note.title ?? "",
       content: note.content,
-      marksAssessmentDelivered: false,
+      tracksAssessment: isAssessmentNote(note),
+      assessmentDueDate: toDateInputValue(note.assessmentDueDate),
+      assessmentSubmitted: Boolean(note.assessmentSubmittedAt),
     });
     setError(null);
   }
@@ -97,7 +124,7 @@ export function ApplicationNotes({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(buildCreatePayload()),
+        body: JSON.stringify(buildNotePayload(form)),
       });
 
       const result = await response.json();
@@ -128,7 +155,7 @@ export function ApplicationNotes({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(buildNotePayload(editForm)),
       });
 
       const result = await response.json();
@@ -197,7 +224,7 @@ export function ApplicationNotes({
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold">Add Note</h2>
         <p className="mt-1 text-sm text-gray-600">
-          Save thoughts, interview details, recruiter feedback, or FollowUp
+          Save thoughts, interview details, recruiter feedback, or follow-up
           context.
         </p>
 
@@ -237,20 +264,73 @@ export function ApplicationNotes({
           <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-sm text-gray-700">
             <input
               type="checkbox"
-              checked={form.marksAssessmentDelivered}
+              checked={form.tracksAssessment}
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
-                  marksAssessmentDelivered: e.target.checked,
+                  tracksAssessment: e.target.checked,
+                  assessmentDueDate: e.target.checked
+                    ? prev.assessmentDueDate
+                    : "",
+                  assessmentSubmitted: e.target.checked
+                    ? prev.assessmentSubmitted
+                    : false,
                 }))
               }
               className="mt-0.5 h-4 w-4 rounded border-gray-300"
             />
             <span>
-              Mark this note as an assessment delivery so the workflow can
-              schedule next week&apos;s follow-up task.
+              This note tracks an assessment so the workflow can manage
+              deadline reminders and the post-submission follow-up.
             </span>
           </label>
+
+          {form.tracksAssessment ? (
+            <div className="grid gap-4 rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label
+                  htmlFor="assessment-due-date"
+                  className="text-sm font-medium"
+                >
+                  Assessment due date
+                </label>
+                <input
+                  id="assessment-due-date"
+                  type="date"
+                  value={form.assessmentDueDate}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      assessmentDueDate: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+                />
+                <p className="text-xs text-gray-600">
+                  If you set a due date, the app will remind you 3 days before,
+                  1 day before, and after the deadline if it is missed.
+                </p>
+              </div>
+
+              <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.assessmentSubmitted}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      assessmentSubmitted: e.target.checked,
+                    }))
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                />
+                <span>
+                  Mark assessment as submitted. This clears deadline reminders
+                  and lets the follow-up workflow take over.
+                </span>
+              </label>
+            </div>
+          ) : null}
 
           <button
             type="submit"
@@ -345,6 +425,67 @@ export function ApplicationNotes({
                         />
                       </div>
 
+                      <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={editForm.tracksAssessment}
+                          onChange={(e) =>
+                            setEditForm((prev) => ({
+                              ...prev,
+                              tracksAssessment: e.target.checked,
+                              assessmentDueDate: e.target.checked
+                                ? prev.assessmentDueDate
+                                : "",
+                              assessmentSubmitted: e.target.checked
+                                ? prev.assessmentSubmitted
+                                : false,
+                            }))
+                          }
+                          className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                        />
+                        <span>This note tracks an assessment.</span>
+                      </label>
+
+                      {editForm.tracksAssessment ? (
+                        <div className="grid gap-4 rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <label
+                              htmlFor={`edit-assessment-due-date-${note.id}`}
+                              className="text-sm font-medium"
+                            >
+                              Assessment due date
+                            </label>
+                            <input
+                              id={`edit-assessment-due-date-${note.id}`}
+                              type="date"
+                              value={editForm.assessmentDueDate}
+                              onChange={(e) =>
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  assessmentDueDate: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+                            />
+                          </div>
+
+                          <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={editForm.assessmentSubmitted}
+                              onChange={(e) =>
+                                setEditForm((prev) => ({
+                                  ...prev,
+                                  assessmentSubmitted: e.target.checked,
+                                }))
+                              }
+                              className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                            />
+                            <span>Mark assessment as submitted.</span>
+                          </label>
+                        </div>
+                      ) : null}
+
                       <div className="flex flex-wrap items-center gap-3">
                         <button
                           type="button"
@@ -376,6 +517,23 @@ export function ApplicationNotes({
                             Created {formatDate(note.createdAt)} · Updated{" "}
                             {formatDate(note.updatedAt)}
                           </p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                            {note.assessmentDueDate ? (
+                              <span className="rounded-full bg-rose-100 px-2 py-1 text-rose-900">
+                                Due {formatDate(note.assessmentDueDate)}
+                              </span>
+                            ) : null}
+                            {note.assessmentSubmittedAt ? (
+                              <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-900">
+                                Submitted {formatDate(note.assessmentSubmittedAt)}
+                              </span>
+                            ) : null}
+                            {isAssessmentOverdue(note) ? (
+                              <span className="rounded-full bg-red-100 px-2 py-1 text-red-800">
+                                Overdue
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
 
                         <div className="flex flex-wrap gap-2">

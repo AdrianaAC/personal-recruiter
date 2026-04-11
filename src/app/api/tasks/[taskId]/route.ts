@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { createTaskSchema } from "@/lib/validations/task";
 
@@ -77,36 +78,53 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const data = parsed.data;
 
-    updated = await prisma.task.update({
-      where: { id: taskId },
-      data: {
-        title: data.title,
-        description: data.description || null,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        applicationId:
-          typeof data.applicationId === "string" && data.applicationId.trim()
-            ? data.applicationId
-            : null,
-        ...(typeof data.completed === "boolean"
-          ? {
-              completed: data.completed,
-              archivedAt: data.completed ? new Date() : null,
-            }
-          : {}),
-      },
+    updated = await prisma.$transaction(async (tx) => {
+      const nextTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          title: data.title,
+          description: data.description || null,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          snoozedUntil: data.snoozedUntil ? new Date(data.snoozedUntil) : null,
+          applicationId:
+            typeof data.applicationId === "string" && data.applicationId.trim()
+              ? data.applicationId
+              : null,
+          ...(typeof data.completed === "boolean"
+            ? {
+                completed: data.completed,
+                archivedAt: data.completed ? new Date() : null,
+              }
+            : {}),
+        },
+      });
+
+      if (nextTask.applicationId) {
+        await syncApplicationWorkflowTask(tx, nextTask.applicationId);
+      }
+
+      return nextTask;
     });
   } else {
-    updated = await prisma.task.update({
-      where: { id: taskId },
-      data: task.completed
-        ? {
-            completed: false,
-            archivedAt: null,
-          }
-        : {
-            completed: true,
-            archivedAt: new Date(),
-          },
+    updated = await prisma.$transaction(async (tx) => {
+      const nextTask = await tx.task.update({
+        where: { id: taskId },
+        data: task.completed
+          ? {
+              completed: false,
+              archivedAt: null,
+            }
+          : {
+              completed: true,
+              archivedAt: new Date(),
+            },
+      });
+
+      if (nextTask.applicationId) {
+        await syncApplicationWorkflowTask(tx, nextTask.applicationId);
+      }
+
+      return nextTask;
     });
   }
 

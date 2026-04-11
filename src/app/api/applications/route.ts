@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   getAppliedAtForWorkflow,
+  getOfferReceivedAtForWorkflow,
   syncApplicationWorkflowTask,
 } from "@/lib/application-workflow";
 import { createApplicationSchema } from "@/lib/validations/application";
@@ -90,9 +91,17 @@ export async function POST(request: Request) {
           workMode: data.workMode ?? null,
           jobUrl: data.jobUrl || null,
           jobDescription: data.jobDescription || null,
+          offerExpiresAt: data.offerExpiresAt
+            ? new Date(data.offerExpiresAt)
+            : null,
           status: data.status,
           priority: data.priority,
           appliedAt: getAppliedAtForWorkflow(null, data.status),
+          offerReceivedAt: getOfferReceivedAtForWorkflow(
+            null,
+            "SAVED",
+            data.status,
+          ),
         },
         select: {
           id: true,
@@ -104,6 +113,7 @@ export async function POST(request: Request) {
           priority: true,
           jobUrl: true,
           jobDescription: true,
+          offerExpiresAt: true,
           createdAt: true,
         },
       });

@@ -1,5 +1,13 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getDashboardConflictAlerts } from "@/lib/dashboard-conflicts";
+import { getApplicationStaleness } from "@/lib/application-staleness";
+import { syncUserApplicationWorkflowTasks } from "@/lib/application-workflow";
+import {
+  getDashboardWeeklySummary,
+  getEndOfWeek,
+  getStartOfWeek,
+} from "@/lib/dashboard-weekly-summary";
 import { prisma } from "@/lib/prisma";
 import { DashboardPageSections } from "@/components/dashboard/dashboard-page-sections";
 
@@ -20,7 +28,13 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  await syncUserApplicationWorkflowTasks(prisma, session.user.id);
+  const now = new Date();
+  const weekStart = getStartOfWeek(now);
+  const weekEnd = getEndOfWeek(now);
+
   const [
+    userWorkflowSettings,
     applications,
     totalApplicationsCount,
     pipelineApplicationsCount,
@@ -32,10 +46,19 @@ export default async function DashboardPage() {
     callUpsCount,
     recentTasks,
     recentCallUps,
+    weeklyFollowUpTasks,
     dueSoonTask,
     nextPlannedCall,
     applicationWithoutNextStep,
   ] = await Promise.all([
+    prisma.user.findUnique({
+      where: {
+        id: session.user.id,
+      },
+      select: {
+        autoThankYouReminderEnabled: true,
+      },
+    }),
     prisma.jobApplication.findMany({
       where: {
         userId: session.user.id,
@@ -51,8 +74,32 @@ export default async function DashboardPage() {
         nextStep: true,
         status: true,
         priority: true,
+        archivedAt: true,
         createdAt: true,
+        offerReceivedAt: true,
+        offerExpiresAt: true,
         updatedAt: true,
+        interviews: {
+          select: {
+            id: true,
+            type: true,
+            stageName: true,
+            scheduledAt: true,
+            outcome: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        notes: {
+          select: {
+            id: true,
+            title: true,
+            assessmentDueDate: true,
+            assessmentSubmittedAt: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     }),
     prisma.jobApplication.count({
@@ -97,6 +144,7 @@ export default async function DashboardPage() {
       take: 8,
       select: {
         id: true,
+        origin: true,
         title: true,
         completed: true,
         updatedAt: true,
@@ -204,6 +252,8 @@ export default async function DashboardPage() {
       },
       select: {
         id: true,
+        origin: true,
+        snoozedUntil: true,
         title: true,
         description: true,
         dueDate: true,
@@ -254,6 +304,29 @@ export default async function DashboardPage() {
       },
       take: RECENT_SECTION_LIMIT,
     }),
+    prisma.task.findMany({
+      where: {
+        userId: session.user.id,
+        origin: "auto_followup",
+        completed: false,
+        archivedAt: null,
+        dueDate: {
+          gte: weekStart,
+          lte: weekEnd,
+        },
+      },
+      orderBy: {
+        dueDate: "asc",
+      },
+      select: {
+        application: {
+          select: {
+            companyName: true,
+            roleTitle: true,
+          },
+        },
+      },
+    }),
     prisma.task.findFirst({
       where: {
         userId: session.user.id,
@@ -268,6 +341,8 @@ export default async function DashboardPage() {
       },
       select: {
         id: true,
+        origin: true,
+        snoozedUntil: true,
         title: true,
         dueDate: true,
         application: {
@@ -335,8 +410,49 @@ export default async function DashboardPage() {
     "FINAL_INTERVIEW",
   ];
 
-  const activeApplicationsInMotionCount = applications.filter((application) =>
-    inProcessStatuses.includes(application.status),
+  const applicationsWithStaleness = applications.map((application) => {
+    const { interviews, notes, ...applicationSummary } = application;
+    const staleness = getApplicationStaleness({
+      ...applicationSummary,
+      interviews,
+      notes,
+    });
+
+    return {
+      ...applicationSummary,
+      staleLevel: staleness?.level ?? null,
+      staleLabel: staleness?.label ?? null,
+      staleDescription: staleness?.description ?? null,
+      staleWeeks: staleness?.weeksSinceActivity ?? null,
+    };
+  });
+  const conflictAlerts = getDashboardConflictAlerts(applications);
+  const weeklySummary = getDashboardWeeklySummary(
+    applicationsWithStaleness,
+    weeklyFollowUpTasks,
+    now,
+  );
+
+  const staleApplications = applicationsWithStaleness.filter(
+    (application) =>
+      application.staleLevel === "stale" || application.staleLevel === "archive",
+  );
+  const archiveCandidateApplications = applicationsWithStaleness.filter(
+    (application) => application.staleLevel === "archive",
+  );
+  const oldestStaleApplication = [...staleApplications].sort((a, b) => {
+    const aWeeks = a.staleWeeks ?? 0;
+    const bWeeks = b.staleWeeks ?? 0;
+    return bWeeks - aWeeks;
+  })[0] ?? null;
+  const oldestArchiveCandidate = [...archiveCandidateApplications].sort((a, b) => {
+    const aWeeks = a.staleWeeks ?? 0;
+    const bWeeks = b.staleWeeks ?? 0;
+    return bWeeks - aWeeks;
+  })[0] ?? null;
+
+  const activeApplicationsInMotionCount = applicationsWithStaleness.filter(
+    (application) => inProcessStatuses.includes(application.status),
   ).length;
 
   const heroHeadline =
@@ -391,6 +507,15 @@ export default async function DashboardPage() {
         "border-sky-200 bg-gradient-to-br from-sky-50 via-white to-white",
       iconClasses: "bg-sky-600 text-white",
       iconKey: "phone" as const,
+    },
+    {
+      label: "Stale",
+      value: staleApplications.length,
+      subtitle: "Applications with 6+ weeks of silence.",
+      classes:
+        "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-white",
+      iconClasses: "bg-rose-600 text-white",
+      iconKey: "spark" as const,
     },
   ];
 
@@ -469,6 +594,35 @@ export default async function DashboardPage() {
   const latestActivity = allTimelineItems[0] ?? null;
 
   const attentionCards = [
+    ...conflictAlerts,
+    oldestStaleApplication
+      ? {
+          id: "attention-stale",
+          label: oldestStaleApplication.staleLevel === "archive"
+            ? "Suggest Archive"
+            : "Probably Inactive",
+          title: oldestStaleApplication.companyName,
+          description: oldestStaleApplication.roleTitle,
+          meta: oldestStaleApplication.staleDescription ?? "Needs attention",
+          classes:
+            oldestStaleApplication.staleLevel === "archive"
+              ? "border-slate-300 bg-gradient-to-br from-slate-100/80 via-white to-white"
+              : "border-rose-200 bg-gradient-to-br from-rose-50/80 via-white to-white",
+        }
+      : null,
+    oldestArchiveCandidate
+      ? {
+          id: "attention-archive",
+          label: "Archive Suggestion",
+          title: `${archiveCandidateApplications.length} quiet application${
+            archiveCandidateApplications.length === 1 ? "" : "s"
+          }`,
+          description: `${oldestArchiveCandidate.companyName} - ${oldestArchiveCandidate.roleTitle}`,
+          meta: "8+ weeks without meaningful updates",
+          classes:
+            "border-slate-300 bg-gradient-to-br from-slate-100/80 via-white to-white",
+        }
+      : null,
     dueSoonTask
       ? {
           id: "attention-task",
@@ -520,8 +674,8 @@ export default async function DashboardPage() {
       totalApplicationsCount={totalApplicationsCount}
       pipelineApplicationsCount={pipelineApplicationsCount}
       latestActivitySummaryLabel={latestActivity?.summaryLabel ?? null}
-      applications={applications}
-      quickActionApplications={applications.map((application) => ({
+      applications={applicationsWithStaleness}
+      quickActionApplications={applicationsWithStaleness.map((application) => ({
         id: application.id,
         companyName: application.companyName,
         roleTitle: application.roleTitle,
@@ -534,6 +688,10 @@ export default async function DashboardPage() {
       }))}
       dashboardStats={dashboardStats}
       attentionCards={attentionCards}
+      weeklySummary={weeklySummary}
+      thankYouReminderEnabled={
+        userWorkflowSettings?.autoThankYouReminderEnabled ?? true
+      }
       recentTasks={recentTasks}
       recentFollowUps={recentCallUps}
       recentContacts={contacts.map((contact) => ({

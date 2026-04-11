@@ -1,0 +1,2 @@
+ALTER TABLE "Task"
+ADD COLUMN "snoozedUntil" TIMESTAMP(3);

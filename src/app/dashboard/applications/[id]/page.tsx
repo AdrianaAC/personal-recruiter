@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getApplicationStaleness } from "@/lib/application-staleness";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { ApplicationNotes } from "@/components/applications/application-notes";
 import { ApplicationTasks } from "@/components/applications/application-tasks";
@@ -26,6 +28,17 @@ function formatLabel(value: string) {
     .join(" ");
 }
 
+function getStalenessTagClass(level: "warning" | "stale" | "archive") {
+  switch (level) {
+    case "warning":
+      return "bg-amber-50 text-amber-800 ring-1 ring-amber-200";
+    case "stale":
+      return "bg-rose-50 text-rose-800 ring-1 ring-rose-200";
+    case "archive":
+      return "bg-slate-900 text-white ring-1 ring-slate-800";
+  }
+}
+
 export default async function ApplicationDetailPage({
   params,
 }: ApplicationDetailPageProps) {
@@ -36,6 +49,24 @@ export default async function ApplicationDetailPage({
   }
 
   const { id } = await params;
+
+  const accessCheck = await prisma.jobApplication.findFirst({
+    where: {
+      id,
+      userId: session.user.id,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!accessCheck) {
+    notFound();
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await syncApplicationWorkflowTask(tx, id);
+  });
 
   const application = await prisma.jobApplication.findFirst({
     where: {
@@ -97,6 +128,8 @@ export default async function ApplicationDetailPage({
           new Date(a.scheduledAt as Date).getTime() -
           new Date(b.scheduledAt as Date).getTime(),
       )[0] ?? null;
+
+  const staleness = getApplicationStaleness(application);
 
   const timelineItems = [
     {
@@ -207,12 +240,29 @@ export default async function ApplicationDetailPage({
                 {formatLabel(application.workMode)}
               </span>
             ) : null}
+
+            {staleness ? (
+              <span
+                className={`rounded-full px-3 py-1 font-medium ${getStalenessTagClass(
+                  staleness.level,
+                )}`}
+                title={staleness.description}
+              >
+                {staleness.label}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
 
       <ApplicationSummaryCards
         status={application.status}
+        stalenessLabel={staleness?.label ?? null}
+        stalenessHelper={
+          staleness
+            ? `${staleness.description} Consider nudging or archiving if it stays quiet.`
+            : null
+        }
         notesCount={application.notes.length}
         openTasksCount={openTasksCount}
         completedTasksCount={completedTasksCount}
@@ -289,6 +339,28 @@ export default async function ApplicationDetailPage({
                 {new Date(application.updatedAt).toLocaleDateString()}
               </dd>
             </div>
+
+            {application.offerReceivedAt ? (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">
+                  Offer received
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {new Date(application.offerReceivedAt).toLocaleDateString()}
+                </dd>
+              </div>
+            ) : null}
+
+            {application.offerExpiresAt ? (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">
+                  Offer expiration
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900">
+                  {new Date(application.offerExpiresAt).toLocaleDateString()}
+                </dd>
+              </div>
+            ) : null}
 
             {application.jobUrl ? (
               <div className="sm:col-span-2">
