@@ -86,12 +86,12 @@ export function RecentApplicationsSection({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-emerald-200/80 bg-white/85 p-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap gap-2">
             {resolvedSummaryChips.map((chip) => (
               <span
                 key={chip.label}
-                className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200"
+                className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-950 ring-1 ring-emerald-200"
               >
                 {chip.value} {chip.label}
               </span>
@@ -102,14 +102,14 @@ export function RecentApplicationsSection({
             <label htmlFor="dashboard-application-search" className="sr-only">
               Search applications
             </label>
-            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+            <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-3 py-2">
               <svg
                 aria-hidden="true"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.8"
-                className="h-4 w-4 text-slate-400"
+                className="h-4 w-4 text-emerald-500"
               >
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" strokeLinecap="round" />
@@ -121,7 +121,7 @@ export function RecentApplicationsSection({
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search applications..."
-                className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+                className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-emerald-700/55"
               />
             </div>
           </div>

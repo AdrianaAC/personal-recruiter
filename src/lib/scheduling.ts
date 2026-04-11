@@ -2,6 +2,11 @@ function pad(value: number) {
   return String(value).padStart(2, "0");
 }
 
+function parseDateInputValue(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function formatDateInputValue(date: Date) {
   const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return localDate.toISOString().slice(0, 10);
@@ -47,4 +52,37 @@ export function getFridayFromWeekInput(weekValue: string) {
   friday.setHours(9, 0, 0, 0);
 
   return friday;
+}
+
+export function startOfSundayWeek(date: Date) {
+  const current = new Date(date);
+  current.setHours(0, 0, 0, 0);
+  current.setDate(current.getDate() - current.getDay());
+  return current;
+}
+
+export function formatSundayWeekInputValue(date: Date) {
+  return formatDateInputValue(startOfSundayWeek(date));
+}
+
+export function getFridayFromSundayWeekInput(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const weekStart = startOfSundayWeek(parseDateInputValue(value));
+  const friday = new Date(weekStart);
+  friday.setDate(weekStart.getDate() + 5);
+  friday.setHours(9, 0, 0, 0);
+  return friday;
+}
+
+export function getSundayWeekNumber(date: Date) {
+  const weekStart = startOfSundayWeek(date);
+  const friday = new Date(weekStart);
+  friday.setDate(weekStart.getDate() + 5);
+  const weekYear = friday.getFullYear();
+  const firstWeekStart = startOfSundayWeek(new Date(weekYear, 0, 1));
+
+  return Math.floor((weekStart.getTime() - firstWeekStart.getTime()) / 604800000) + 1;
 }

@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
   formatDateInputValue,
-  formatWeekInputValue,
-  getFridayFromWeekInput,
+  formatSundayWeekInputValue,
+  getFridayFromSundayWeekInput,
 } from "@/lib/scheduling";
 import { SpecificDateIndicator } from "@/components/ui/specific-date-indicator";
+import { WeekDateInput } from "@/components/dashboard/week-date-input";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
 import { DashboardTaskQuickAdd } from "./dashboard-task-quick-add";
 
@@ -19,6 +20,7 @@ type RecentTask = {
   dueDate: string | Date | null;
   isSpecificDate?: boolean;
   updatedAt?: string | Date;
+  href?: string | null;
   application: {
     id: string;
     companyName: string;
@@ -59,6 +61,15 @@ type RecentTasksSectionProps = {
   }[];
 };
 
+const TASK_FIELD_CLASS =
+  "w-full rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:bg-amber-50";
+const TASK_TEXTAREA_CLASS =
+  "min-h-[120px] w-full rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:bg-amber-50";
+const TASK_SELECT_CLASS =
+  "w-full rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-amber-500 focus:bg-amber-50";
+const TASK_TOGGLE_CLASS =
+  "flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950";
+
 function formatDate(value: string | Date | null) {
   if (!value) {
     return "No date";
@@ -80,7 +91,7 @@ function buildTaskFormState(task?: {
     title: task?.title ?? "",
     description: task?.description ?? "",
     dueDate: date ? formatDateInputValue(date) : "",
-    dueWeek: date ? formatWeekInputValue(date) : "",
+    dueWeek: date ? formatSundayWeekInputValue(date) : "",
     scheduleSpecificDate: task?.isSpecificDate ?? Boolean(date),
     applicationId: task?.applicationId ?? "",
   };
@@ -95,7 +106,7 @@ function resolveTaskDueDate(form: TaskFormState) {
     return "";
   }
 
-  return getFridayFromWeekInput(form.dueWeek)?.toISOString() ?? "";
+  return getFridayFromSundayWeekInput(form.dueWeek)?.toISOString() ?? "";
 }
 
 function sortTasksByUpdatedAt(taskList: RecentTask[]) {
@@ -469,7 +480,7 @@ export function RecentTasksSection({
         <div>
           <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
           {description ? (
-            <p className="mt-1 text-sm text-slate-600">{description}</p>
+            <p className="mt-1 text-sm text-amber-950/70">{description}</p>
           ) : null}
         </div>
 
@@ -499,15 +510,15 @@ export function RecentTasksSection({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 md:flex-row md:items-center md:justify-between">
+      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-amber-200/80 bg-white/85 p-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950 ring-1 ring-amber-200">
             {taskItems.length} {countLabel}
           </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950 ring-1 ring-amber-200">
             {linkedTasksCount} linked
           </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-950 ring-1 ring-amber-200">
             {standaloneTasksCount} standalone
           </span>
         </div>
@@ -516,14 +527,14 @@ export function RecentTasksSection({
           <label htmlFor="dashboard-task-search" className="sr-only">
             Search tasks
           </label>
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50/70 px-3 py-2">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.8"
-              className="h-4 w-4 text-slate-400"
+              className="h-4 w-4 text-amber-500"
             >
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" strokeLinecap="round" />
@@ -535,14 +546,14 @@ export function RecentTasksSection({
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search tasks..."
-              className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+              className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-amber-700/55"
             />
           </div>
         </div>
       </div>
 
       {filteredTasks.length === 0 ? (
-        <div className="mt-6 flex-1 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center">
+        <div className="mt-6 flex-1 rounded-2xl border border-dashed border-amber-300 bg-amber-50/40 p-8 text-center">
           <h3 className="text-lg font-medium text-slate-900">
             {taskItems.length === 0 ? emptyTitle : "No matching tasks"}
           </h3>
@@ -557,12 +568,41 @@ export function RecentTasksSection({
           {visibleTasks.map((task) => (
             <div
               key={task.id}
+              role={
+                enableTaskEditing
+                  ? "button"
+                  : task.href
+                    ? "link"
+                    : undefined
+              }
+              tabIndex={enableTaskEditing || task.href ? 0 : undefined}
               className={`min-h-[124px] rounded-2xl border border-amber-200 bg-gradient-to-r from-white via-amber-50/40 to-white px-4 py-3 shadow-md transition hover:shadow-lg ${
-                enableTaskEditing ? "cursor-pointer" : ""
+                enableTaskEditing || task.href ? "cursor-pointer" : ""
               }`}
               onClick={() => {
                 if (enableTaskEditing) {
                   openEditTask(task);
+                  return;
+                }
+
+                if (task.href) {
+                  router.push(task.href);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                  return;
+                }
+
+                event.preventDefault();
+
+                if (enableTaskEditing) {
+                  openEditTask(task);
+                  return;
+                }
+
+                if (task.href) {
+                  router.push(task.href);
                 }
               }}
             >
@@ -612,7 +652,7 @@ export function RecentTasksSection({
                       Open application
                     </Link>
                   ) : (
-                    <span className="inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700 ring-1 ring-slate-300">
+                    <span className="inline-flex items-center whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900 ring-1 ring-amber-300">
                       General task
                     </span>
                   )}
@@ -628,7 +668,7 @@ export function RecentTasksSection({
                   </span>
 
                   <span
-                    className="inline-flex items-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 font-medium text-slate-600 ring-1 ring-slate-200"
+                    className="inline-flex items-center whitespace-nowrap rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-900 ring-1 ring-amber-200"
                     title={task.updatedAt ? new Date(task.updatedAt).toLocaleString() : undefined}
                   >
                     Updated {formatRelativeDate(task.updatedAt ?? task.dueDate)}
@@ -733,12 +773,12 @@ export function RecentTasksSection({
               type="button"
               onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
               disabled={page === 1}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-amber-300 bg-amber-50 px-4 font-medium text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
             </button>
 
-            <span className="min-w-24 text-center font-medium text-slate-700">
+            <span className="min-w-24 text-center font-medium text-amber-950">
               {displayedItemCount} of {filteredTasks.length}
             </span>
 
@@ -748,7 +788,7 @@ export function RecentTasksSection({
                 setCurrentPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={page === totalPages}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-amber-300 bg-amber-50 px-4 font-medium text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>
@@ -777,7 +817,7 @@ export function RecentTasksSection({
 
       {editingTaskId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
+          <div className="w-full max-w-lg rounded-2xl border border-amber-200 bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">
@@ -791,7 +831,7 @@ export function RecentTasksSection({
               <button
                 type="button"
                 onClick={closeEditTask}
-                className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 transition hover:bg-amber-100"
               >
                 Close
               </button>
@@ -811,7 +851,7 @@ export function RecentTasksSection({
                       title: event.target.value,
                     }))
                   }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                  className={TASK_FIELD_CLASS}
                 />
               </div>
 
@@ -819,7 +859,7 @@ export function RecentTasksSection({
                 <label className="text-sm font-medium text-slate-700">
                   Schedule
                 </label>
-                <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <label className={TASK_TOGGLE_CLASS}>
                   <input
                     type="checkbox"
                     checked={editForm.scheduleSpecificDate}
@@ -829,6 +869,7 @@ export function RecentTasksSection({
                         scheduleSpecificDate: event.target.checked,
                       }))
                     }
+                    className="accent-amber-500"
                   />
                   Schedule for specific date
                 </label>
@@ -848,19 +889,18 @@ export function RecentTasksSection({
                         dueDate: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                    className={`${TASK_FIELD_CLASS} calendar-themed-input calendar-themed-input-amber`}
                   />
                 ) : (
-                  <input
-                    type="week"
+                  <WeekDateInput
                     value={editForm.dueWeek}
-                    onChange={(event) =>
+                    onChange={(value) =>
                       setEditForm((currentForm) => ({
                         ...currentForm,
-                        dueWeek: event.target.value,
+                        dueWeek: value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                    tone="amber"
                   />
                 )}
                 <p className="text-xs text-slate-500">
@@ -882,7 +922,7 @@ export function RecentTasksSection({
                       description: event.target.value,
                     }))
                   }
-                  className="min-h-[120px] w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                  className={TASK_TEXTAREA_CLASS}
                 />
               </div>
 
@@ -898,7 +938,7 @@ export function RecentTasksSection({
                       applicationId: event.target.value,
                     }))
                   }
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                  className={TASK_SELECT_CLASS}
                 >
                   <option value="">Standalone task</option>
                   {addTaskApplications.map((application) => (
@@ -913,7 +953,7 @@ export function RecentTasksSection({
                 <button
                   type="button"
                   onClick={closeEditTask}
-                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  className="rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 transition hover:bg-amber-100"
                 >
                   Cancel
                 </button>
@@ -922,7 +962,7 @@ export function RecentTasksSection({
                   type="button"
                   onClick={handleSaveEditTask}
                   disabled={isSavingEdit}
-                  className="rounded-full bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-full bg-amber-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSavingEdit ? "Saving..." : "Save changes"}
                 </button>

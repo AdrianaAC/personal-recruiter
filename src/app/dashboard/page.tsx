@@ -454,8 +454,8 @@ export default async function DashboardPage() {
       value: totalApplicationsCount,
       subtitle: "Every opportunity in your tracker.",
       classes:
-        "border-slate-200 bg-gradient-to-br from-white via-white to-slate-100/80",
-      iconClasses: "bg-slate-900 text-white",
+        "border-slate-300 bg-gradient-to-br from-slate-200 via-white to-white",
+      iconClasses: "bg-slate-950 text-white",
       iconKey: "briefcase" as const,
     },
     {
@@ -463,8 +463,8 @@ export default async function DashboardPage() {
       value: pipelineApplicationsCount,
       subtitle: "Active applications beyond the saved stage.",
       classes:
-        "border-emerald-200 bg-gradient-to-br from-emerald-50/60 via-white to-white",
-      iconClasses: "bg-emerald-500 text-white",
+        "border-slate-300 bg-gradient-to-br from-slate-100 via-white to-white",
+      iconClasses: "bg-slate-900 text-white",
       iconKey: "spark" as const,
     },
     {
@@ -472,8 +472,8 @@ export default async function DashboardPage() {
       value: openTasksCount,
       subtitle: "Open actions across your workflow.",
       classes:
-        "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-white",
-      iconClasses: "bg-amber-500 text-white",
+        "border-slate-300 bg-gradient-to-br from-slate-100 via-white to-white",
+      iconClasses: "bg-slate-900 text-white",
       iconKey: "send" as const,
     },
     {
@@ -481,8 +481,8 @@ export default async function DashboardPage() {
       value: callUpsCount,
       subtitle: "Contacts tied to active opportunities.",
       classes:
-        "border-sky-200 bg-gradient-to-br from-sky-50 via-white to-white",
-      iconClasses: "bg-sky-600 text-white",
+        "border-slate-300 bg-gradient-to-br from-slate-100 via-white to-white",
+      iconClasses: "bg-slate-900 text-white",
       iconKey: "phone" as const,
     },
   ];
@@ -559,7 +559,6 @@ export default async function DashboardPage() {
   );
 
   const timelineItems = allTimelineItems.slice(0, 12);
-  const latestActivity = allTimelineItems[0] ?? null;
   const calendarEvents = [
     ...scheduledCalendarTasks.map((task) => ({
       id: `task-${task.id}`,
@@ -611,7 +610,9 @@ export default async function DashboardPage() {
             ? new Date(dueSoonTask.dueDate).toLocaleDateString()
             : "No date",
           classes:
-            "border-amber-200 bg-gradient-to-br from-amber-50/80 via-white to-white",
+            "border-amber-200 bg-gradient-to-br from-amber-100/80 via-white to-white",
+          labelClasses: "text-amber-700",
+          metaClasses: "text-amber-800/90",
         }
       : null,
     nextPlannedCall
@@ -626,7 +627,9 @@ export default async function DashboardPage() {
             ? new Date(nextPlannedCall.scheduledAt).toLocaleDateString()
             : "No date",
           classes:
-            "border-sky-200 bg-gradient-to-br from-sky-50/80 via-white to-white",
+            "border-sky-200 bg-gradient-to-br from-sky-100/80 via-white to-white",
+          labelClasses: "text-sky-700",
+          metaClasses: "text-sky-800/90",
         }
       : null,
     applicationWithoutNextStep
@@ -637,7 +640,9 @@ export default async function DashboardPage() {
           description: applicationWithoutNextStep.roleTitle,
           meta: "No next step set",
           classes:
-            "border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-white",
+            "border-emerald-200 bg-gradient-to-br from-emerald-100/80 via-white to-white",
+          labelClasses: "text-emerald-700",
+          metaClasses: "text-emerald-800/90",
         }
       : null,
   ].filter((item) => item !== null);
@@ -647,9 +652,6 @@ export default async function DashboardPage() {
       sessionUserName={session.user.name}
       heroHeadline={heroHeadline}
       heroDescription={heroDescription}
-      totalApplicationsCount={totalApplicationsCount}
-      pipelineApplicationsCount={pipelineApplicationsCount}
-      latestActivitySummaryLabel={latestActivity?.summaryLabel ?? null}
       applications={applications}
       quickActionApplications={applications.map((application) => ({
         id: application.id,
@@ -665,8 +667,14 @@ export default async function DashboardPage() {
       dashboardStats={dashboardStats}
       attentionCards={attentionCards}
       calendarEvents={calendarEvents}
-      recentTasks={recentTasks}
-      recentFollowUps={recentCallUps}
+      recentTasks={recentTasks.map((task) => ({
+        ...task,
+        href: `/dashboard/tasks/${task.id}`,
+      }))}
+      recentFollowUps={recentCallUps.map((callUp) => ({
+        ...callUp,
+        href: `/dashboard/call-ups/${callUp.id}`,
+      }))}
       recentContacts={contacts.map((contact) => ({
         ...contact,
         applicationLinksCount: contact._count.applications,

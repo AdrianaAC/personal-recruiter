@@ -109,7 +109,7 @@ export function DashboardActivityTimeline({
   }, [filter, items]);
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50/80 p-6 shadow-sm">
+    <section className="rounded-3xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-50 p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-950">Timeline</h2>
@@ -134,21 +134,21 @@ export function DashboardActivityTimeline({
               className={`rounded-full px-3 py-1 text-xs font-medium ring-1 transition ${
                 filter === option.key
                   ? "bg-slate-950 text-white ring-slate-950"
-                  : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50"
+                  : "bg-slate-100 text-slate-700 ring-slate-300 hover:bg-slate-200"
               }`}
             >
               {option.label}
             </button>
           ))}
 
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-900 ring-1 ring-slate-300">
             {filteredItems.length} shown
           </span>
         </div>
       </div>
 
       {filteredItems.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center">
+        <div className="mt-6 rounded-2xl border border-dashed border-slate-400 bg-slate-50/70 p-8 text-center">
           <h3 className="text-lg font-medium text-slate-900">No activity yet</h3>
           <p className="mt-2 text-sm text-slate-600">
             No events match the current timeline filter.
@@ -203,11 +203,11 @@ export function DashboardActivityTimeline({
 
                       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
                         {item.meta ? (
-                          <span className="rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-800 ring-1 ring-slate-300">
                             {item.meta}
                           </span>
                         ) : (
-                          <span className="rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-500 ring-1 ring-slate-200">
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 ring-1 ring-slate-300">
                             Recent activity
                           </span>
                         )}
@@ -215,7 +215,7 @@ export function DashboardActivityTimeline({
                         {item.href ? (
                           <Link
                             href={item.href}
-                            className="inline-flex rounded-full border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                            className="inline-flex rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-800 transition hover:bg-slate-200"
                           >
                             Open details
                           </Link>

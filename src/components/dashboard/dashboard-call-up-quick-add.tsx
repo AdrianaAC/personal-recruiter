@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   formatDateTimeInputValue,
-  formatWeekInputValue,
-  getFridayFromWeekInput,
+  formatSundayWeekInputValue,
+  getFridayFromSundayWeekInput,
 } from "@/lib/scheduling";
+import { WeekDateInput } from "@/components/dashboard/week-date-input";
 
 type ApplicationOption = {
   id: string;
@@ -29,6 +30,11 @@ type Props = {
   initialScheduledAt?: string | null;
 };
 
+const FOLLOWUP_FIELD_CLASS =
+  "w-full rounded-md border border-sky-300 bg-sky-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:bg-sky-50";
+const FOLLOWUP_TOGGLE_CLASS =
+  "flex items-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950";
+
 export function DashboardCallUpQuickAdd({
   open,
   onClose,
@@ -44,7 +50,7 @@ export function DashboardCallUpQuickAdd({
     Boolean(initialScheduledAt),
   );
   const [scheduledWeek, setScheduledWeek] = useState(
-    initialDate ? formatWeekInputValue(initialDate) : "",
+    initialDate ? formatSundayWeekInputValue(initialDate) : "",
   );
   const [scheduledAt, setScheduledAt] = useState(
     initialDate ? formatDateTimeInputValue(initialDate) : "",
@@ -67,7 +73,7 @@ export function DashboardCallUpQuickAdd({
 
     const resolvedScheduledAt = scheduleSpecificDate
       ? scheduledAt || undefined
-      : getFridayFromWeekInput(scheduledWeek)?.toISOString();
+      : getFridayFromSundayWeekInput(scheduledWeek)?.toISOString();
 
     const res = await fetch("/api/call-ups", {
       method: "POST",
@@ -94,7 +100,7 @@ export function DashboardCallUpQuickAdd({
 
     setTitle("");
     setScheduleSpecificDate(Boolean(initialScheduledAt));
-    setScheduledWeek(initialDate ? formatWeekInputValue(initialDate) : "");
+    setScheduledWeek(initialDate ? formatSundayWeekInputValue(initialDate) : "");
     setScheduledAt(initialDate ? formatDateTimeInputValue(initialDate) : "");
     setApplicationId("");
     setContactId("");
@@ -104,25 +110,26 @@ export function DashboardCallUpQuickAdd({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-lg">
-        <h2 className="text-lg font-semibold">New FollowUp</h2>
+      <div className="w-full max-w-md rounded-xl border border-sky-200 bg-white p-5 shadow-lg">
+        <h2 className="text-lg font-semibold text-slate-950">New FollowUp</h2>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <input
             placeholder="FollowUp title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
+            className={FOLLOWUP_FIELD_CLASS}
             required
           />
 
-          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          <label className={FOLLOWUP_TOGGLE_CLASS}>
             <input
               type="checkbox"
               checked={scheduleSpecificDate}
               onChange={(event) =>
                 setScheduleSpecificDate(event.target.checked)
               }
+              className="accent-sky-500"
             />
             Schedule for specific date
           </label>
@@ -132,21 +139,20 @@ export function DashboardCallUpQuickAdd({
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 text-sm"
+              className={`${FOLLOWUP_FIELD_CLASS} calendar-themed-input calendar-themed-input-sky`}
             />
           ) : (
-            <input
-              type="week"
+            <WeekDateInput
               value={scheduledWeek}
-              onChange={(e) => setScheduledWeek(e.target.value)}
-              className="w-full rounded-md border px-3 py-2 text-sm"
+              onChange={setScheduledWeek}
+              tone="sky"
             />
           )}
 
           <select
             value={contactId}
             onChange={(e) => setContactId(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
+            className={FOLLOWUP_FIELD_CLASS}
             required
           >
             <option value="">Choose a contact</option>
@@ -162,7 +168,7 @@ export function DashboardCallUpQuickAdd({
           <select
             value={applicationId}
             onChange={(e) => setApplicationId(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
+            className={FOLLOWUP_FIELD_CLASS}
           >
             <option value="">No application (standalone FollowUp)</option>
             {applications.map((application) => (
@@ -176,14 +182,14 @@ export function DashboardCallUpQuickAdd({
             <button
               type="button"
               onClick={onClose}
-              className="text-sm text-gray-600"
+              className="rounded-md border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-100"
             >
               Cancel
             </button>
 
             <button
               disabled={loading}
-              className="rounded-md bg-black px-4 py-2 text-sm text-white"
+              className="rounded-md bg-sky-500 px-4 py-2 text-sm text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Saving..." : "Create"}
             </button>

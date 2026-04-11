@@ -360,12 +360,12 @@ export function RecentContactsSection({
   }
 
   return (
-    <section className="flex h-full flex-col rounded-3xl border-[3px] border-slate-900 bg-gradient-to-br from-slate-300 via-slate-100 to-white p-6 shadow-sm">
+    <section className="flex h-full flex-col rounded-3xl border-[3px] border-rose-400 bg-gradient-to-br from-rose-100 via-rose-50 to-white p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
           {description ? (
-            <p className="mt-1 text-sm text-slate-700">{description}</p>
+            <p className="mt-1 text-sm text-rose-950/75">{description}</p>
           ) : null}
         </div>
 
@@ -373,7 +373,7 @@ export function RecentContactsSection({
           {viewHref ? (
             <a
               href={viewHref}
-              className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-slate-100"
+              className="inline-flex items-center rounded-full border border-rose-300 bg-white px-4 py-2 text-sm font-medium text-rose-950 transition hover:bg-rose-50"
             >
               {viewLabel}
             </a>
@@ -383,10 +383,10 @@ export function RecentContactsSection({
             <button
               type="button"
               onClick={() => setIsContactModalOpen(true)}
-              className={`inline-flex items-center rounded-full font-semibold text-white transition hover:bg-slate-800 ${
+              className={`inline-flex items-center rounded-full font-semibold text-white transition hover:bg-rose-600 ${
                 largeAddContactAction
-                  ? "bg-slate-900 px-4 py-2 text-sm"
-                  : "bg-slate-900 px-3 py-1.5 text-xs"
+                  ? "bg-rose-500 px-4 py-2 text-sm"
+                  : "bg-rose-500 px-3 py-1.5 text-xs"
               }`}
             >
               {addContactLabel}
@@ -395,15 +395,15 @@ export function RecentContactsSection({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 md:flex-row md:items-center md:justify-between">
+      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-rose-300 bg-white/85 p-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-950 ring-1 ring-rose-300">
             {contactItems.length} {countLabel}
           </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-950 ring-1 ring-rose-300">
             {emailContactsCount} {secondaryCountLabel}
           </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-950 ring-1 ring-rose-300">
             {linkedInContactsCount} {tertiaryCountLabel}
           </span>
         </div>
@@ -412,14 +412,14 @@ export function RecentContactsSection({
           <label htmlFor="dashboard-contact-search" className="sr-only">
             Search contacts
           </label>
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-rose-300 bg-rose-50/80 px-3 py-2">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.8"
-              className="h-4 w-4 text-slate-400"
+              className="h-4 w-4 text-rose-500"
             >
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" strokeLinecap="round" />
@@ -431,14 +431,14 @@ export function RecentContactsSection({
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search contacts..."
-              className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+              className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-rose-700/55"
             />
           </div>
         </div>
       </div>
 
       {filteredContacts.length === 0 ? (
-        <div className="mt-6 flex-1 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center">
+        <div className="mt-6 flex-1 rounded-2xl border border-dashed border-rose-400 bg-rose-50/50 p-8 text-center">
           <h3 className="text-lg font-medium text-slate-900">
             {contactItems.length === 0 ? emptyTitle : "No matching contacts"}
           </h3>
@@ -453,7 +453,7 @@ export function RecentContactsSection({
           {visibleContacts.map((contact) => (
             <div
               key={contact.id}
-              className={`min-h-[124px] rounded-2xl border border-slate-300 bg-gradient-to-r from-white via-slate-50/60 to-white px-4 py-3 shadow-md transition hover:shadow-lg ${
+              className={`min-h-[124px] rounded-2xl border border-rose-300 bg-gradient-to-r from-white via-rose-50/60 to-white px-4 py-3 shadow-md transition hover:shadow-lg ${
                 enableContactEditing ? "cursor-pointer" : ""
               }`}
               onClick={() => {
@@ -511,7 +511,7 @@ export function RecentContactsSection({
                 </div>
 
                 <div className="flex flex-nowrap items-center justify-center gap-1 self-center text-[10px] leading-none">
-                  <span className="inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700 ring-1 ring-slate-300">
+                  <span className="inline-flex items-center whitespace-nowrap rounded-full bg-rose-100 px-2 py-0.5 font-semibold text-rose-950 ring-1 ring-rose-300">
                     {contact.applicationLinksCount > 0
                       ? "Application contact"
                       : "General contact"}
@@ -520,7 +520,7 @@ export function RecentContactsSection({
                   <span
                     className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 font-semibold ring-1 ${
                       contact.email
-                        ? "bg-sky-100 text-sky-900 ring-sky-300"
+                        ? "bg-rose-100 text-rose-950 ring-rose-300"
                         : "bg-slate-100 text-slate-700 ring-slate-300"
                     }`}
                   >
@@ -530,7 +530,7 @@ export function RecentContactsSection({
                   <span
                     className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 font-semibold ring-1 ${
                       contact.linkedinUrl
-                        ? "bg-sky-100 text-sky-900 ring-sky-300"
+                        ? "bg-rose-100 text-rose-950 ring-rose-300"
                         : "bg-slate-100 text-slate-700 ring-slate-300"
                     }`}
                   >
@@ -538,7 +538,7 @@ export function RecentContactsSection({
                   </span>
 
                   <span
-                    className="inline-flex items-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 font-medium text-slate-600 ring-1 ring-slate-200"
+                    className="inline-flex items-center whitespace-nowrap rounded-full bg-rose-50 px-2 py-0.5 font-medium text-rose-950 ring-1 ring-rose-200"
                     title={new Date(contact.updatedAt).toLocaleString()}
                   >
                     Updated {formatRelativeDate(contact.updatedAt)}
@@ -546,7 +546,7 @@ export function RecentContactsSection({
                 </div>
 
                 <div className="flex justify-end lg:justify-self-end">
-                  <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm">
+                  <div className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-white/90 p-1 shadow-sm">
                     <button
                       type="button"
                       onClick={(event) => {
@@ -586,7 +586,7 @@ export function RecentContactsSection({
                       disabled={copyingContactId === contact.id}
                       aria-label={`Duplicate ${contact.fullName}`}
                       title="Duplicate contact"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-slate-400 hover:bg-slate-100 hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-white text-gray-600 transition hover:border-rose-400 hover:bg-rose-50 hover:text-rose-900 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {copyingContactId === contact.id ? (
                         <span className="h-3 w-3 rounded-sm border border-current border-r-transparent" />
@@ -630,12 +630,12 @@ export function RecentContactsSection({
               type="button"
               onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
               disabled={page === 1}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-rose-400 bg-rose-50 px-4 font-medium text-rose-950 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
             </button>
 
-            <span className="min-w-24 text-center font-medium text-slate-700">
+            <span className="min-w-24 text-center font-medium text-rose-950">
               {displayedItemCount} of {filteredContacts.length}
             </span>
 
@@ -645,7 +645,7 @@ export function RecentContactsSection({
                 setCurrentPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={page === totalPages}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-rose-400 bg-rose-50 px-4 font-medium text-rose-950 transition hover:border-rose-500 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>
@@ -673,7 +673,7 @@ export function RecentContactsSection({
 
       {editingContactId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 p-4 backdrop-blur-[3px]">
-          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-xl">
+          <div className="w-full max-w-lg rounded-2xl border border-rose-300 bg-white/95 p-5 shadow-xl">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Edit Contact</h3>
               <p className="mt-1 text-sm text-slate-600">
@@ -693,7 +693,7 @@ export function RecentContactsSection({
                       fullName: event.target.value,
                     }))
                   }
-                  className="w-full rounded-xl border border-slate-300 bg-slate-100/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-slate-100"
+                  className="w-full rounded-xl border border-rose-300 bg-rose-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-rose-500 focus:bg-rose-50"
                 />
               </div>
 
@@ -709,7 +709,7 @@ export function RecentContactsSection({
                         phone: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-slate-100/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-slate-100"
+                    className="w-full rounded-xl border border-rose-300 bg-rose-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-rose-500 focus:bg-rose-50"
                   />
                 </div>
 
@@ -724,7 +724,7 @@ export function RecentContactsSection({
                         email: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-slate-100/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-slate-100"
+                    className="w-full rounded-xl border border-rose-300 bg-rose-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-rose-500 focus:bg-rose-50"
                   />
                 </div>
               </div>
@@ -740,7 +740,7 @@ export function RecentContactsSection({
                       linkedinUrl: event.target.value,
                     }))
                   }
-                  className="w-full rounded-xl border border-slate-300 bg-slate-100/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-slate-100"
+                  className="w-full rounded-xl border border-rose-300 bg-rose-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-rose-500 focus:bg-rose-50"
                 />
               </div>
 
@@ -756,7 +756,7 @@ export function RecentContactsSection({
                         companyName: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-slate-100/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-slate-100"
+                    className="w-full rounded-xl border border-rose-300 bg-rose-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-rose-500 focus:bg-rose-50"
                   />
                 </div>
 
@@ -771,7 +771,7 @@ export function RecentContactsSection({
                         jobTitle: event.target.value,
                       }))
                     }
-                    className="w-full rounded-xl border border-slate-300 bg-slate-100/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-slate-100"
+                    className="w-full rounded-xl border border-rose-300 bg-rose-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-rose-500 focus:bg-rose-50"
                   />
                 </div>
               </div>
@@ -787,7 +787,7 @@ export function RecentContactsSection({
                     }))
                   }
                   rows={4}
-                  className="w-full rounded-xl border border-slate-300 bg-slate-100/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:bg-slate-100"
+                  className="w-full rounded-xl border border-rose-300 bg-rose-50/90 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-rose-500 focus:bg-rose-50"
                 />
               </div>
             </div>
@@ -796,7 +796,7 @@ export function RecentContactsSection({
               <button
                 type="button"
                 onClick={closeEditContact}
-                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+                className="rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-950 transition hover:border-rose-400 hover:bg-rose-100"
               >
                 Cancel
               </button>
@@ -805,7 +805,7 @@ export function RecentContactsSection({
                 type="button"
                 onClick={() => void handleSaveEditContact()}
                 disabled={isSavingEdit}
-                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isSavingEdit ? "Saving..." : "Save changes"}
               </button>

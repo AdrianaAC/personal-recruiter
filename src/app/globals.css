@@ -27,3 +27,42 @@ body {
   letter-spacing: 0.03em;
   line-height: 1.55;
 }
+
+.calendar-themed-input {
+  color-scheme: light;
+}
+
+.calendar-themed-input::-webkit-calendar-picker-indicator {
+  border-radius: 9999px;
+  cursor: pointer;
+  padding: 0.3rem;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.calendar-themed-input-amber {
+  accent-color: #f59e0b;
+}
+
+.calendar-themed-input-amber::-webkit-calendar-picker-indicator {
+  background-color: rgb(251 191 36 / 0.2);
+  box-shadow: inset 0 0 0 1px rgb(217 119 6 / 0.15);
+}
+
+.calendar-themed-input-amber:focus::-webkit-calendar-picker-indicator {
+  background-color: rgb(251 191 36 / 0.3);
+}
+
+.calendar-themed-input-sky {
+  accent-color: #0ea5e9;
+}
+
+.calendar-themed-input-sky::-webkit-calendar-picker-indicator {
+  background-color: rgb(56 189 248 / 0.18);
+  box-shadow: inset 0 0 0 1px rgb(2 132 199 / 0.15);
+}
+
+.calendar-themed-input-sky:focus::-webkit-calendar-picker-indicator {
+  background-color: rgb(56 189 248 / 0.28);
+}

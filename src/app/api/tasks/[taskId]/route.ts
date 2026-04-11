@@ -19,13 +19,24 @@ async function readJsonSafely(request: Request) {
   }
 }
 
-function revalidateTaskPaths(applicationId?: string | null) {
+function revalidateTaskPaths(
+  taskId?: string | null,
+  ...applicationIds: Array<string | null | undefined>
+) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/archive");
   revalidatePath("/dashboard/tasks");
   revalidatePath("/dashboard/tasks/archive");
 
-  if (applicationId) {
+  if (taskId) {
+    revalidatePath(`/dashboard/tasks/${taskId}`);
+  }
+
+  for (const applicationId of applicationIds) {
+    if (!applicationId) {
+      continue;
+    }
+
     revalidatePath(`/dashboard/applications/${applicationId}`);
   }
 }
@@ -111,7 +122,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
   }
 
-  revalidateTaskPaths(updated.applicationId);
+  revalidateTaskPaths(taskId, task.applicationId, updated.applicationId);
 
   return NextResponse.json(updated);
 }
@@ -147,7 +158,7 @@ export async function DELETE(_: Request, context: RouteContext) {
       },
     });
 
-    revalidateTaskPaths(existingTask.applicationId);
+    revalidateTaskPaths(taskId, existingTask.applicationId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

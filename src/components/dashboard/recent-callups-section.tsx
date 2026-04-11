@@ -13,6 +13,7 @@ type RecentCallUp = {
   scheduledAt: string | Date | null;
   isSpecificDate?: boolean;
   updatedAt?: string | Date;
+  href?: string | null;
   application: {
     id: string;
     companyName: string;
@@ -98,7 +99,8 @@ function CallUpCheckbox({
     >
       <button
         type="button"
-        onClick={() => {
+        onClick={(event) => {
+          event.stopPropagation();
           void runAction();
         }}
         disabled={loading}
@@ -284,7 +286,7 @@ export function RecentCallUpsSection({
         <div>
           <h2 className="text-xl font-semibold text-slate-950">{title}</h2>
           {description ? (
-            <p className="mt-1 text-sm text-slate-600">{description}</p>
+            <p className="mt-1 text-sm text-sky-950/70">{description}</p>
           ) : null}
         </div>
 
@@ -300,15 +302,15 @@ export function RecentCallUpsSection({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 md:flex-row md:items-center md:justify-between">
+      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-sky-200/80 bg-white/85 p-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-950 ring-1 ring-sky-200">
             {followUpItems.length} {countLabel}
           </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-950 ring-1 ring-sky-200">
             {linkedCallUpsCount} {secondaryCountLabel}
           </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+          <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-950 ring-1 ring-sky-200">
             {standaloneCallUpsCount} {tertiaryCountLabel}
           </span>
         </div>
@@ -317,14 +319,14 @@ export function RecentCallUpsSection({
           <label htmlFor="dashboard-callup-search" className="sr-only">
             Search FollowUps
           </label>
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50/70 px-3 py-2">
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.8"
-              className="h-4 w-4 text-slate-400"
+              className="h-4 w-4 text-sky-500"
             >
               <circle cx="11" cy="11" r="7" />
               <path d="m20 20-3.5-3.5" strokeLinecap="round" />
@@ -336,14 +338,14 @@ export function RecentCallUpsSection({
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search FollowUps..."
-              className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none"
+              className="w-full border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-sky-700/55"
             />
           </div>
         </div>
       </div>
 
       {filteredCallUps.length === 0 ? (
-        <div className="mt-6 flex-1 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-8 text-center">
+        <div className="mt-6 flex-1 rounded-2xl border border-dashed border-sky-300 bg-sky-50/40 p-8 text-center">
           <h3 className="text-lg font-medium text-slate-900">
             {followUpItems.length === 0 ? emptyTitle : "No matching FollowUps"}
           </h3>
@@ -358,7 +360,24 @@ export function RecentCallUpsSection({
           {visibleCallUps.map((callUp) => (
             <div
               key={callUp.id}
-              className="min-h-[124px] rounded-2xl border border-sky-200 bg-gradient-to-r from-white via-sky-50/40 to-white px-4 py-3 shadow-md transition hover:shadow-lg"
+              role={callUp.href ? "link" : undefined}
+              tabIndex={callUp.href ? 0 : undefined}
+              className={`min-h-[124px] rounded-2xl border border-sky-200 bg-gradient-to-r from-white via-sky-50/40 to-white px-4 py-3 shadow-md transition hover:shadow-lg ${
+                callUp.href ? "cursor-pointer" : ""
+              }`}
+              onClick={() => {
+                if (callUp.href) {
+                  router.push(callUp.href);
+                }
+              }}
+              onKeyDown={(event) => {
+                if (!callUp.href || (event.key !== "Enter" && event.key !== " ")) {
+                  return;
+                }
+
+                event.preventDefault();
+                router.push(callUp.href);
+              }}
             >
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_auto_auto] lg:items-center lg:gap-4">
                 <div className="min-w-0">
@@ -400,12 +419,13 @@ export function RecentCallUpsSection({
                   {callUp.application ? (
                     <Link
                       href={`/dashboard/applications/${callUp.application.id}`}
+                      onClick={(event) => event.stopPropagation()}
                       className="inline-flex items-center whitespace-nowrap rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-900 ring-1 ring-emerald-300 transition hover:bg-emerald-200"
                     >
                       Open application
                     </Link>
                   ) : (
-                    <span className="inline-flex items-center whitespace-nowrap rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-700 ring-1 ring-slate-300">
+                    <span className="inline-flex items-center whitespace-nowrap rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900 ring-1 ring-sky-300">
                       General FollowUp
                     </span>
                   )}
@@ -421,7 +441,7 @@ export function RecentCallUpsSection({
                   </span>
 
                   <span
-                    className="inline-flex items-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 font-medium text-slate-600 ring-1 ring-slate-200"
+                    className="inline-flex items-center whitespace-nowrap rounded-full bg-sky-50 px-2 py-0.5 font-medium text-sky-900 ring-1 ring-sky-200"
                     title={callUp.updatedAt ? new Date(callUp.updatedAt).toLocaleString() : undefined}
                   >
                     Updated {formatRelativeDate(callUp.updatedAt ?? callUp.scheduledAt)}
@@ -457,12 +477,12 @@ export function RecentCallUpsSection({
               type="button"
               onClick={() => setCurrentPage((current) => Math.max(1, current - 1))}
               disabled={page === 1}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-sky-300 bg-sky-50 px-4 font-medium text-sky-900 transition hover:border-sky-400 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Previous
             </button>
 
-            <span className="min-w-24 text-center font-medium text-slate-700">
+            <span className="min-w-24 text-center font-medium text-sky-950">
               {displayedItemCount} of {filteredCallUps.length}
             </span>
 
@@ -472,7 +492,7 @@ export function RecentCallUpsSection({
                 setCurrentPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={page === totalPages}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-slate-300 bg-white px-4 font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 items-center justify-center rounded-full border border-sky-300 bg-sky-50 px-4 font-medium text-sky-900 transition hover:border-sky-400 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Next
             </button>

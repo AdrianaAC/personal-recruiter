@@ -42,6 +42,8 @@ type AttentionCard = {
   description: string;
   meta: string;
   classes: string;
+  labelClasses?: string;
+  metaClasses?: string;
 };
 
 type TimelineItem = {
@@ -78,9 +80,6 @@ type DashboardPageSectionsProps = {
   sessionUserName?: string | null;
   heroHeadline: string;
   heroDescription: string;
-  totalApplicationsCount: number;
-  pipelineApplicationsCount: number;
-  latestActivitySummaryLabel?: string | null;
   applications: Array<{
     id: string;
     companyName: string;
@@ -111,6 +110,7 @@ type DashboardPageSectionsProps = {
     dueDate: string | Date | null;
     isSpecificDate?: boolean;
     updatedAt?: string | Date;
+    href?: string | null;
     application: {
       id: string;
       companyName: string;
@@ -125,6 +125,7 @@ type DashboardPageSectionsProps = {
     scheduledAt: string | Date | null;
     isSpecificDate?: boolean;
     updatedAt?: string | Date;
+    href?: string | null;
     application: {
       id: string;
       companyName: string;
@@ -249,9 +250,6 @@ export function DashboardPageSections({
   sessionUserName,
   heroHeadline,
   heroDescription,
-  totalApplicationsCount,
-  pipelineApplicationsCount,
-  latestActivitySummaryLabel,
   applications,
   quickActionApplications,
   quickActionContacts,
@@ -298,34 +296,21 @@ export function DashboardPageSections({
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-amber-50/50 to-sky-50/60 p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-300 bg-gradient-to-br from-slate-200 via-white to-slate-50 p-6 shadow-sm">
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-sm font-medium text-slate-500">Dashboard</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-                Welcome back{sessionUserName ? `, ${sessionUserName}` : ""}.
-              </h1>
-              <p className="mt-3 text-lg font-medium text-slate-800">
-                {heroHeadline}
-              </p>
-              <p className="mt-2 text-sm text-slate-600">{heroDescription}</p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                  {totalApplicationsCount} tracked
-                </span>
-                <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                  {pipelineApplicationsCount} in flow
-                </span>
-                {latestActivitySummaryLabel ? (
-                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
-                    Latest: {latestActivitySummaryLabel}
-                  </span>
-                ) : null}
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:justify-between">
+            <div className="flex max-w-3xl flex-1 flex-col justify-between lg:min-h-[14rem]">
+              <div className="flex flex-1 flex-col justify-center">
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                  Welcome back{sessionUserName ? `, ${sessionUserName}` : ""}.
+                </h1>
+                <p className="mt-3 text-lg font-medium text-slate-800">
+                  {heroHeadline}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">{heroDescription}</p>
               </div>
 
-              <div className="mt-5">
+              <div className="pt-5">
                 <DashboardQuickActions
                   applications={quickActionApplications}
                   contacts={quickActionContacts}
@@ -380,7 +365,7 @@ export function DashboardPageSections({
           </section>
 
           {attentionCards.length > 0 ? (
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="rounded-3xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-50 p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-950">
@@ -391,7 +376,7 @@ export function DashboardPageSections({
                   </p>
                 </div>
 
-                <span className="rounded-full bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white ring-1 ring-slate-900">
                   {attentionCards.length} priorities
                 </span>
               </div>
@@ -402,7 +387,11 @@ export function DashboardPageSections({
                     key={item.id}
                     className={`rounded-2xl border p-4 shadow-sm ${item.classes}`}
                   >
-                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    <p
+                      className={`text-xs font-semibold uppercase tracking-[0.12em] ${
+                        item.labelClasses ?? "text-slate-500"
+                      }`}
+                    >
                       {item.label}
                     </p>
                     <h3 className="mt-2 text-base font-semibold text-slate-950">
@@ -411,7 +400,11 @@ export function DashboardPageSections({
                     <p className="mt-1 text-sm text-slate-600">
                       {item.description}
                     </p>
-                    <p className="mt-3 text-xs font-medium text-slate-500">
+                    <p
+                      className={`mt-3 text-xs font-medium ${
+                        item.metaClasses ?? "text-slate-500"
+                      }`}
+                    >
                       {item.meta}
                     </p>
                   </div>

@@ -149,6 +149,68 @@ function buildCalendarDays(currentMonth: Date) {
   return days;
 }
 
+function CalendarDayEventCard({
+  event,
+  compact,
+}: {
+  event: CalendarEvent;
+  compact: boolean;
+}) {
+  const specificDateIndicator =
+    event.isSpecificDate &&
+    (event.type === "task" || event.type === "followup") ? (
+      <span className="mr-1 inline-flex shrink-0 align-middle">
+        <SpecificDateIndicator
+          className={`${
+            compact ? "h-2.5 w-2.5" : "h-3 w-3"
+          } ${event.type === "task" ? "text-amber-500" : "text-sky-500"}`}
+        />
+      </span>
+    ) : null;
+
+  const className = compact
+    ? `flex min-h-0 flex-1 items-center overflow-hidden rounded-xl border px-2 py-1 text-[10px] leading-none ${getEventClasses(
+        event.type,
+      )}`
+    : `flex h-[2.8125rem] flex-col justify-center overflow-hidden rounded-xl border px-2.5 py-2 text-[11px] leading-tight ${getEventClasses(
+        event.type,
+      )}`;
+
+  const content = compact ? (
+    <div className="flex min-w-0 items-center gap-1">
+      <span className="shrink-0 font-semibold">
+        {formatEventType(event.type)}
+      </span>
+      <span className="min-w-0 truncate">
+        {specificDateIndicator}
+        {event.title}
+      </span>
+    </div>
+  ) : (
+    <>
+      <p className="font-semibold">{formatEventType(event.type)}</p>
+      <p className="mt-0.5 truncate">
+        {specificDateIndicator}
+        {event.title}
+      </p>
+    </>
+  );
+
+  if (event.href) {
+    return (
+      <Link
+        href={event.href}
+        onClick={(clickEvent) => clickEvent.stopPropagation()}
+        className={className}
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
+}
+
 function NewEventModal({
   date,
   onClose,
@@ -380,6 +442,7 @@ export function DashboardCalendarSection({
                     {week.map((day) => {
                       const key = startOfDay(day).toISOString();
                       const dayEvents = eventsByDay.get(key) ?? [];
+                      const compactEvents = dayEvents.length > 2;
                       const isToday = sameDay(day, today);
                       const inCurrentMonth =
                         day.getMonth() === visibleMonth.getMonth();
@@ -431,74 +494,20 @@ export function DashboardCalendarSection({
                             </span>
                           </div>
 
-                          <div className="mt-3 space-y-1.5">
-                            {dayEvents.slice(0, 3).map((event) =>
-                              event.href ? (
-                                <Link
-                                  key={event.id}
-                                  href={event.href}
-                                  onClick={(clickEvent) =>
-                                    clickEvent.stopPropagation()
-                                  }
-                                  className={`block rounded-xl border px-2.5 py-2 text-[11px] leading-tight ${getEventClasses(
-                                    event.type,
-                                  )}`}
-                                >
-                                  <p className="font-semibold">
-                                    {formatEventType(event.type)}
-                                  </p>
-                                  <p className="mt-0.5 truncate">
-                                    {event.isSpecificDate &&
-                                    (event.type === "task" ||
-                                      event.type === "followup") ? (
-                                      <span className="mr-1 inline-flex align-middle">
-                                        <SpecificDateIndicator
-                                          className={`h-3 w-3 ${
-                                            event.type === "task"
-                                              ? "text-amber-500"
-                                              : "text-sky-500"
-                                          }`}
-                                        />
-                                      </span>
-                                    ) : null}
-                                    {event.title}
-                                  </p>
-                                </Link>
-                              ) : (
-                                <div
-                                  key={event.id}
-                                  className={`rounded-xl border px-2.5 py-2 text-[11px] leading-tight ${getEventClasses(
-                                    event.type,
-                                  )}`}
-                                >
-                                  <p className="font-semibold">
-                                    {formatEventType(event.type)}
-                                  </p>
-                                  <p className="mt-0.5 truncate">
-                                    {event.isSpecificDate &&
-                                    (event.type === "task" ||
-                                      event.type === "followup") ? (
-                                      <span className="mr-1 inline-flex align-middle">
-                                        <SpecificDateIndicator
-                                          className={`h-3 w-3 ${
-                                            event.type === "task"
-                                              ? "text-amber-500"
-                                              : "text-sky-500"
-                                          }`}
-                                        />
-                                      </span>
-                                    ) : null}
-                                    {event.title}
-                                  </p>
-                                </div>
-                              ),
-                            )}
-
-                            {dayEvents.length > 3 ? (
-                              <p className="px-1 text-[11px] font-medium text-slate-500">
-                                +{dayEvents.length - 3} more
-                              </p>
-                            ) : null}
+                          <div
+                            className={`mt-3 flex h-24 flex-col overflow-hidden ${
+                              dayEvents.length === 1
+                                ? "justify-center"
+                                : "justify-start"
+                            } ${compactEvents ? "gap-1" : "gap-1.5"}`}
+                          >
+                            {dayEvents.map((event) => (
+                              <CalendarDayEventCard
+                                key={event.id}
+                                event={event}
+                                compact={compactEvents}
+                              />
+                            ))}
                           </div>
                         </div>
                       );
