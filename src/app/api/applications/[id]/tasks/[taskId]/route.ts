@@ -58,6 +58,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         title: data.title,
         description: data.description || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        isSpecificDate: Boolean(data.isSpecificDate),
         ...(typeof data.completed === "boolean"
           ? {
               completed: data.completed,
@@ -70,6 +71,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         title: true,
         description: true,
         dueDate: true,
+        isSpecificDate: true,
         completed: true,
         createdAt: true,
         updatedAt: true,

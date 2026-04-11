@@ -6,6 +6,7 @@ export type DashboardVisibilityState = {
   tasks: boolean;
   followUps: boolean;
   contacts: boolean;
+  calendar: boolean;
   timeline: boolean;
 };
 
@@ -23,6 +24,7 @@ const toggleItems: Array<{
   { key: "tasks", label: "Tasks" },
   { key: "followUps", label: "FollowUps" },
   { key: "contacts", label: "Contacts" },
+  { key: "calendar", label: "Calendar" },
   { key: "timeline", label: "Timeline" },
 ];
 

@@ -16,6 +16,8 @@ export const createTaskSchema = z.object({
 
   dueDate: z.string().optional().nullable().or(z.literal("")),
 
+  isSpecificDate: z.boolean().optional(),
+
   completed: z.boolean().optional(),
 });
 

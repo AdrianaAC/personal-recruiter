@@ -96,6 +96,7 @@ model Task {
   title         String
   description   String?
   dueDate       DateTime?
+  isSpecificDate Boolean  @default(false)
   completed     Boolean   @default(false)
   archivedAt    DateTime?
   createdAt     DateTime  @default(now())
@@ -140,6 +141,7 @@ model CallUp {
   title         String
   notes         String?
   scheduledAt   DateTime?
+  isSpecificDate Boolean     @default(false)
   status        CallUpStatus @default(PLANNED)
   archivedAt    DateTime?
   createdAt     DateTime     @default(now())

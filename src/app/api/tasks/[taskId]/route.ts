@@ -83,6 +83,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         title: data.title,
         description: data.description || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        isSpecificDate: Boolean(data.isSpecificDate),
         applicationId:
           typeof data.applicationId === "string" && data.applicationId.trim()
             ? data.applicationId

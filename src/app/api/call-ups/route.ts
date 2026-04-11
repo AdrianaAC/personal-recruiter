@@ -24,6 +24,7 @@ const callUp = await prisma.callUp.create({
     title: body.title,
     notes: body.notes,
     scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null,
+    isSpecificDate: Boolean(body.isSpecificDate),
     applicationId: body.applicationId || null,
     contactId: body.contactId,
     userId: user.id,

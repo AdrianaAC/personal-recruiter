@@ -39,6 +39,7 @@ export async function POST(_: Request, context: RouteContext) {
         title: true,
         description: true,
         dueDate: true,
+        isSpecificDate: true,
         applicationId: true,
       },
     });
@@ -54,12 +55,14 @@ export async function POST(_: Request, context: RouteContext) {
         title: task.title,
         description: task.description,
         dueDate: task.dueDate,
+        isSpecificDate: task.isSpecificDate,
       },
       select: {
         id: true,
         title: true,
         description: true,
         dueDate: true,
+        isSpecificDate: true,
         updatedAt: true,
         application: {
           select: {

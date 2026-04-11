@@ -6,6 +6,7 @@ import {
   type DashboardVisibilityState,
 } from "@/components/dashboard/dashboard-ai-feedback-toggle";
 import { DashboardActivityTimeline } from "@/components/dashboard/dashboard-activity-timeline";
+import { DashboardCalendarSection } from "@/components/dashboard/dashboard-calendar-section";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
 import { RecentApplicationsSection } from "@/components/dashboard/recent-applications-section";
 import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-section";
@@ -94,11 +95,21 @@ type DashboardPageSectionsProps = {
   quickActionContacts: QuickActionContactOption[];
   dashboardStats: DashboardStat[];
   attentionCards: AttentionCard[];
+  calendarEvents: Array<{
+    id: string;
+    type: "task" | "interview" | "followup";
+    title: string;
+    startsAt: string | Date;
+    isSpecificDate?: boolean;
+    href?: string | null;
+    meta?: string | null;
+  }>;
   recentTasks: Array<{
     id: string;
     title: string;
     description: string | null;
     dueDate: string | Date | null;
+    isSpecificDate?: boolean;
     updatedAt?: string | Date;
     application: {
       id: string;
@@ -109,9 +120,10 @@ type DashboardPageSectionsProps = {
   recentFollowUps: Array<{
     id: string;
     title: string;
-    description: string | null;
+    description?: string | null;
     notes: string | null;
     scheduledAt: string | Date | null;
+    isSpecificDate?: boolean;
     updatedAt?: string | Date;
     application: {
       id: string;
@@ -135,6 +147,7 @@ const initialVisibilityState: DashboardVisibilityState = {
   tasks: true,
   followUps: true,
   contacts: true,
+  calendar: true,
   timeline: true,
 };
 
@@ -244,6 +257,7 @@ export function DashboardPageSections({
   quickActionContacts,
   dashboardStats,
   attentionCards,
+  calendarEvents,
   recentTasks,
   recentFollowUps,
   recentContacts,
@@ -443,6 +457,14 @@ export function DashboardPageSections({
             {visibleSecondarySections[2].content}
           </div>
         </>
+      ) : null}
+
+      {visibility.calendar ? (
+        <DashboardCalendarSection
+          events={calendarEvents}
+          applications={quickActionApplications}
+          contacts={quickActionContacts}
+        />
       ) : null}
 
       {visibility.timeline ? (

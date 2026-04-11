@@ -32,6 +32,9 @@ export default async function DashboardPage() {
     callUpsCount,
     recentTasks,
     recentCallUps,
+    scheduledCalendarTasks,
+    scheduledCalendarInterviews,
+    scheduledCalendarFollowUps,
     dueSoonTask,
     nextPlannedCall,
     applicationWithoutNextStep,
@@ -207,6 +210,7 @@ export default async function DashboardPage() {
         title: true,
         description: true,
         dueDate: true,
+        isSpecificDate: true,
         updatedAt: true,
         application: {
           select: {
@@ -232,9 +236,9 @@ export default async function DashboardPage() {
       select: {
         id: true,
         title: true,
-        description: true,
         notes: true,
         scheduledAt: true,
+        isSpecificDate: true,
         updatedAt: true,
         contact: {
           select: {
@@ -254,6 +258,93 @@ export default async function DashboardPage() {
       },
       take: RECENT_SECTION_LIMIT,
     }),
+    prisma.task.findMany({
+      where: {
+        userId: session.user.id,
+        completed: false,
+        archivedAt: null,
+        dueDate: {
+          not: null,
+        },
+      },
+      orderBy: {
+        dueDate: "asc",
+      },
+      select: {
+        id: true,
+        title: true,
+        dueDate: true,
+        isSpecificDate: true,
+        application: {
+          select: {
+            id: true,
+            companyName: true,
+            roleTitle: true,
+          },
+        },
+      },
+    }),
+    prisma.interview.findMany({
+      where: {
+        scheduledAt: {
+          not: null,
+        },
+        outcome: {
+          not: "CANCELLED",
+        },
+        application: {
+          userId: session.user.id,
+          archivedAt: null,
+        },
+      },
+      orderBy: {
+        scheduledAt: "asc",
+      },
+      select: {
+        id: true,
+        type: true,
+        stageName: true,
+        scheduledAt: true,
+        application: {
+          select: {
+            id: true,
+            companyName: true,
+            roleTitle: true,
+          },
+        },
+      },
+    }),
+    prisma.callUp.findMany({
+      where: {
+        userId: session.user.id,
+        archivedAt: null,
+        status: "PLANNED",
+        scheduledAt: {
+          not: null,
+        },
+      },
+      orderBy: {
+        scheduledAt: "asc",
+      },
+      select: {
+        id: true,
+        title: true,
+        scheduledAt: true,
+        isSpecificDate: true,
+        application: {
+          select: {
+            id: true,
+            companyName: true,
+            roleTitle: true,
+          },
+        },
+        contact: {
+          select: {
+            fullName: true,
+          },
+        },
+      },
+    }),
     prisma.task.findFirst({
       where: {
         userId: session.user.id,
@@ -270,6 +361,7 @@ export default async function DashboardPage() {
         id: true,
         title: true,
         dueDate: true,
+        isSpecificDate: true,
         application: {
           select: {
             id: true,
@@ -295,6 +387,7 @@ export default async function DashboardPage() {
         id: true,
         title: true,
         scheduledAt: true,
+        isSpecificDate: true,
         application: {
           select: {
             id: true,
@@ -467,6 +560,43 @@ export default async function DashboardPage() {
 
   const timelineItems = allTimelineItems.slice(0, 12);
   const latestActivity = allTimelineItems[0] ?? null;
+  const calendarEvents = [
+    ...scheduledCalendarTasks.map((task) => ({
+      id: `task-${task.id}`,
+      type: "task" as const,
+      title: task.application
+        ? `${task.title} - ${task.application.companyName}`
+        : task.title,
+      startsAt: task.dueDate as Date,
+      isSpecificDate: task.isSpecificDate,
+      href: task.application
+        ? `/dashboard/applications/${task.application.id}`
+        : null,
+    })),
+    ...scheduledCalendarInterviews.map((interview) => ({
+      id: `interview-${interview.id}`,
+      type: "interview" as const,
+      title: interview.stageName || formatLabel(interview.type),
+      startsAt: interview.scheduledAt as Date,
+      href: `/dashboard/applications/${interview.application.id}`,
+      meta: `${interview.application.companyName} - ${interview.application.roleTitle}`,
+    })),
+    ...scheduledCalendarFollowUps.map((callUp) => ({
+      id: `followup-${callUp.id}`,
+      type: "followup" as const,
+      title: callUp.contact
+        ? `${callUp.title} - ${callUp.contact.fullName}`
+        : callUp.title,
+      startsAt: callUp.scheduledAt as Date,
+      isSpecificDate: callUp.isSpecificDate,
+      href: callUp.application
+        ? `/dashboard/applications/${callUp.application.id}`
+        : null,
+      meta: callUp.application
+        ? `${callUp.application.companyName} - ${callUp.application.roleTitle}`
+        : null,
+    })),
+  ];
 
   const attentionCards = [
     dueSoonTask
@@ -534,6 +664,7 @@ export default async function DashboardPage() {
       }))}
       dashboardStats={dashboardStats}
       attentionCards={attentionCards}
+      calendarEvents={calendarEvents}
       recentTasks={recentTasks}
       recentFollowUps={recentCallUps}
       recentContacts={contacts.map((contact) => ({

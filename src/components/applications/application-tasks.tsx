@@ -1,12 +1,19 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import {
+  formatDateInputValue,
+  formatWeekInputValue,
+  getFridayFromWeekInput,
+} from "@/lib/scheduling";
+import { SpecificDateIndicator } from "@/components/ui/specific-date-indicator";
 
 type Task = {
   id: string;
   title: string;
   description: string | null;
   dueDate: string | Date | null;
+  isSpecificDate?: boolean;
   completed: boolean;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -22,12 +29,8 @@ type TaskFormState = {
   title: string;
   description: string;
   dueDate: string;
-};
-
-const initialFormState: TaskFormState = {
-  title: "",
-  description: "",
-  dueDate: "",
+  dueWeek: string;
+  scheduleSpecificDate: boolean;
 };
 
 async function readJsonSafely(response: Response) {
@@ -45,15 +48,44 @@ function toDateInputValue(value: string | Date | null) {
   return date.toISOString().split("T")[0];
 }
 
+function buildTaskFormState(task?: {
+  title?: string;
+  description?: string | null;
+  dueDate?: string | Date | null;
+  isSpecificDate?: boolean;
+}): TaskFormState {
+  const date = task?.dueDate ? new Date(task.dueDate) : null;
+
+  return {
+    title: task?.title ?? "",
+    description: task?.description ?? "",
+    dueDate: date ? formatDateInputValue(date) : "",
+    dueWeek: date ? formatWeekInputValue(date) : "",
+    scheduleSpecificDate: task?.isSpecificDate ?? Boolean(date),
+  };
+}
+
+function resolveTaskDueDate(form: TaskFormState) {
+  if (form.scheduleSpecificDate) {
+    return form.dueDate || "";
+  }
+
+  if (!form.dueWeek) {
+    return "";
+  }
+
+  return getFridayFromWeekInput(form.dueWeek)?.toISOString() ?? "";
+}
+
 export function ApplicationTasks({
   applicationId,
   initialTasks,
   extraContent,
 }: ApplicationTasksProps) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [form, setForm] = useState<TaskFormState>(initialFormState);
+  const [form, setForm] = useState<TaskFormState>(buildTaskFormState());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<TaskFormState>(initialFormState);
+  const [editForm, setEditForm] = useState<TaskFormState>(buildTaskFormState());
 
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -73,17 +105,13 @@ export function ApplicationTasks({
 
   function startEdit(task: Task) {
     setEditingTaskId(task.id);
-    setEditForm({
-      title: task.title,
-      description: task.description ?? "",
-      dueDate: toDateInputValue(task.dueDate),
-    });
+    setEditForm(buildTaskFormState(task));
     setError(null);
   }
 
   function cancelEdit() {
     setEditingTaskId(null);
-    setEditForm(initialFormState);
+    setEditForm(buildTaskFormState());
     setError(null);
   }
 
@@ -98,7 +126,12 @@ export function ApplicationTasks({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+          dueDate: resolveTaskDueDate(form),
+          isSpecificDate: form.scheduleSpecificDate,
+        }),
       });
 
       const result = await readJsonSafely(response);
@@ -109,7 +142,7 @@ export function ApplicationTasks({
       }
 
       setTasks((prev) => sortTasks([result, ...prev]));
-      setForm(initialFormState);
+      setForm(buildTaskFormState());
     } catch (err) {
       console.error(err);
       setError("Something went wrong while creating the task.");
@@ -130,7 +163,12 @@ export function ApplicationTasks({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          title: editForm.title,
+          description: editForm.description,
+          dueDate: resolveTaskDueDate(editForm),
+          isSpecificDate: editForm.scheduleSpecificDate,
+        }),
         },
       );
 
@@ -145,7 +183,7 @@ export function ApplicationTasks({
         sortTasks(prev.map((task) => (task.id === taskId ? result : task))),
       );
       setEditingTaskId(null);
-      setEditForm(initialFormState);
+      setEditForm(buildTaskFormState());
     } catch (err) {
       console.error(err);
       setError("Something went wrong while updating the task.");
@@ -185,7 +223,7 @@ export function ApplicationTasks({
 
       if (editingTaskId === taskId) {
         setEditingTaskId(null);
-        setEditForm(initialFormState);
+        setEditForm(buildTaskFormState());
       }
     } catch (err) {
       console.error(err);
@@ -210,6 +248,7 @@ export function ApplicationTasks({
             title: task.title,
             description: task.description ?? "",
             dueDate: toDateInputValue(task.dueDate),
+            isSpecificDate: task.isSpecificDate ?? false,
             completed: !task.completed,
           }),
         },
@@ -278,19 +317,53 @@ export function ApplicationTasks({
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="task-due-date" className="text-sm font-medium">
-              Due Date
+            <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={form.scheduleSpecificDate}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    scheduleSpecificDate: e.target.checked,
+                  }))
+                }
+              />
+              Schedule for specific date
             </label>
-            <input
-              id="task-due-date"
-              type="date"
-              value={form.dueDate}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, dueDate: e.target.value }))
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-            />
           </div>
+
+          <div className="space-y-2">
+            <label htmlFor="task-due-date" className="text-sm font-medium">
+              {form.scheduleSpecificDate ? "Due Date" : "Due Week"}
+            </label>
+            {form.scheduleSpecificDate ? (
+              <input
+                id="task-due-date"
+                type="date"
+                value={form.dueDate}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, dueDate: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+              />
+            ) : (
+              <input
+                id="task-due-date"
+                type="week"
+                value={form.dueWeek}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, dueWeek: e.target.value }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+              />
+            )}
+          </div>
+
+          <p className="text-xs text-gray-500">
+            {!form.scheduleSpecificDate && form.dueWeek
+              ? "Week-based tasks are scheduled for Friday of the selected week."
+              : "Choose a specific calendar date or plan the task by week number."}
+          </p>
 
           <button
             type="submit"
@@ -391,25 +464,62 @@ export function ApplicationTasks({
                       </div>
 
                       <div className="space-y-2">
+                        <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+                          <input
+                            type="checkbox"
+                            checked={editForm.scheduleSpecificDate}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                scheduleSpecificDate: e.target.checked,
+                              }))
+                            }
+                          />
+                          Schedule for specific date
+                        </label>
+                      </div>
+
+                      <div className="space-y-2">
                         <label
                           htmlFor={`edit-task-due-date-${task.id}`}
                           className="text-sm font-medium"
                         >
-                          Due Date
+                          {editForm.scheduleSpecificDate ? "Due Date" : "Due Week"}
                         </label>
-                        <input
-                          id={`edit-task-due-date-${task.id}`}
-                          type="date"
-                          value={editForm.dueDate}
-                          onChange={(e) =>
-                            setEditForm((prev) => ({
-                              ...prev,
-                              dueDate: e.target.value,
-                            }))
-                          }
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-                        />
+                        {editForm.scheduleSpecificDate ? (
+                          <input
+                            id={`edit-task-due-date-${task.id}`}
+                            type="date"
+                            value={editForm.dueDate}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                dueDate: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+                          />
+                        ) : (
+                          <input
+                            id={`edit-task-due-date-${task.id}`}
+                            type="week"
+                            value={editForm.dueWeek}
+                            onChange={(e) =>
+                              setEditForm((prev) => ({
+                                ...prev,
+                                dueWeek: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+                          />
+                        )}
                       </div>
+
+                      <p className="text-xs text-gray-500">
+                        {!editForm.scheduleSpecificDate && editForm.dueWeek
+                          ? "Week-based scheduling places the task on Friday of the selected week."
+                          : "Switch between a specific date and week-based scheduling any time."}
+                      </p>
 
                       <div className="flex flex-wrap items-center gap-3">
                         <button
@@ -437,12 +547,15 @@ export function ApplicationTasks({
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <h3
-                              className={`text-base font-semibold ${
+                              className={`flex items-center gap-2 text-base font-semibold ${
                                 task.completed
                                   ? "text-gray-500 line-through"
                                   : "text-gray-900"
                               }`}
                             >
+                              {task.isSpecificDate ? (
+                                <SpecificDateIndicator className="h-3.5 w-3.5 text-amber-500" />
+                              ) : null}
                               {task.title}
                             </h3>
 

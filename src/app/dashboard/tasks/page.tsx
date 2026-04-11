@@ -25,6 +25,7 @@ export default async function TasksPage() {
       title: true,
       description: true,
       dueDate: true,
+      isSpecificDate: true,
       updatedAt: true,
       application: {
         select: {

@@ -2,6 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
+import {
+  formatDateTimeInputValue,
+  formatWeekInputValue,
+  getFridayFromWeekInput,
+} from "@/lib/scheduling";
 
 type ApplicationContactOption = {
   id: string;
@@ -19,15 +24,33 @@ type CallUpFormState = {
   title: string;
   notes: string;
   scheduledAt: string;
+  scheduledWeek: string;
+  scheduleSpecificDate: boolean;
   contactId: string;
 };
 
-const initialFormState: CallUpFormState = {
-  title: "",
-  notes: "",
-  scheduledAt: "",
-  contactId: "",
-};
+function buildCallUpFormState(): CallUpFormState {
+  return {
+    title: "",
+    notes: "",
+    scheduledAt: "",
+    scheduledWeek: formatWeekInputValue(new Date()),
+    scheduleSpecificDate: false,
+    contactId: "",
+  };
+}
+
+function resolveScheduledAt(form: CallUpFormState) {
+  if (form.scheduleSpecificDate) {
+    return form.scheduledAt || "";
+  }
+
+  if (!form.scheduledWeek) {
+    return "";
+  }
+
+  return getFridayFromWeekInput(form.scheduledWeek)?.toISOString() ?? "";
+}
 
 async function readJsonSafely(response: Response) {
   return response.json().catch(() => null);
@@ -38,7 +61,7 @@ export function ApplicationCallUps({
   contacts,
 }: ApplicationCallUpsProps) {
   const router = useRouter();
-  const [form, setForm] = useState<CallUpFormState>(initialFormState);
+  const [form, setForm] = useState<CallUpFormState>(buildCallUpFormState());
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -55,7 +78,13 @@ export function ApplicationCallUps({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          title: form.title,
+          notes: form.notes,
+          scheduledAt: resolveScheduledAt(form),
+          isSpecificDate: form.scheduleSpecificDate,
+          contactId: form.contactId,
+        }),
       });
 
       const result = await readJsonSafely(response);
@@ -67,7 +96,7 @@ export function ApplicationCallUps({
         return;
       }
 
-      setForm(initialFormState);
+      setForm(buildCallUpFormState());
       setSuccess("FollowUp created.");
       startTransition(() => {
         router.refresh();
@@ -121,19 +150,59 @@ export function ApplicationCallUps({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="call-up-date" className="text-sm font-medium">
-            Scheduled Date
+          <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.scheduleSpecificDate}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  scheduleSpecificDate: event.target.checked,
+                  scheduledAt: event.target.checked
+                    ? prev.scheduledAt || formatDateTimeInputValue(new Date())
+                    : prev.scheduledAt,
+                }))
+              }
+            />
+            Schedule for specific date
           </label>
-          <input
-            id="call-up-date"
-            type="date"
-            value={form.scheduledAt}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, scheduledAt: event.target.value }))
-            }
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
-          />
         </div>
+
+        <div className="space-y-2">
+          <label htmlFor="call-up-date" className="text-sm font-medium">
+            {form.scheduleSpecificDate ? "Scheduled Date" : "Scheduled Week"}
+          </label>
+          {form.scheduleSpecificDate ? (
+            <input
+              id="call-up-date"
+              type="datetime-local"
+              value={form.scheduledAt}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, scheduledAt: event.target.value }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            />
+          ) : (
+            <input
+              id="call-up-date"
+              type="week"
+              value={form.scheduledWeek}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  scheduledWeek: event.target.value,
+                }))
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-black"
+            />
+          )}
+        </div>
+
+        <p className="text-xs text-gray-500">
+          {!form.scheduleSpecificDate && form.scheduledWeek
+            ? "Week-based FollowUps are scheduled for Friday of the selected week."
+            : "Choose a specific date and time, or plan the FollowUp by week number."}
+        </p>
 
         <div className="space-y-2">
           <label htmlFor="call-up-contact" className="text-sm font-medium">

@@ -16,6 +16,8 @@ export const createCallUpSchema = z.object({
 
   scheduledAt: z.string().optional().nullable().or(z.literal("")),
 
+  isSpecificDate: z.boolean().optional(),
+
   contactId: z.string().trim().optional().nullable().or(z.literal("")),
 });
 

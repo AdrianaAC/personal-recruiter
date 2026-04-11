@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  formatDateTimeInputValue,
+  formatWeekInputValue,
+  getFridayFromWeekInput,
+} from "@/lib/scheduling";
 
 type ApplicationOption = {
   id: string;
@@ -21,6 +26,7 @@ type Props = {
   onClose: () => void;
   applications: ApplicationOption[];
   contacts: ContactOption[];
+  initialScheduledAt?: string | null;
 };
 
 export function DashboardCallUpQuickAdd({
@@ -28,11 +34,21 @@ export function DashboardCallUpQuickAdd({
   onClose,
   applications,
   contacts,
+  initialScheduledAt,
 }: Props) {
   const router = useRouter();
+  const initialDate = initialScheduledAt ? new Date(initialScheduledAt) : null;
 
   const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduleSpecificDate, setScheduleSpecificDate] = useState(
+    Boolean(initialScheduledAt),
+  );
+  const [scheduledWeek, setScheduledWeek] = useState(
+    initialDate ? formatWeekInputValue(initialDate) : "",
+  );
+  const [scheduledAt, setScheduledAt] = useState(
+    initialDate ? formatDateTimeInputValue(initialDate) : "",
+  );
   const [applicationId, setApplicationId] = useState("");
   const [contactId, setContactId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +65,10 @@ export function DashboardCallUpQuickAdd({
 
     setLoading(true);
 
+    const resolvedScheduledAt = scheduleSpecificDate
+      ? scheduledAt || undefined
+      : getFridayFromWeekInput(scheduledWeek)?.toISOString();
+
     const res = await fetch("/api/call-ups", {
       method: "POST",
       headers: {
@@ -56,7 +76,8 @@ export function DashboardCallUpQuickAdd({
       },
       body: JSON.stringify({
         title,
-        scheduledAt: scheduledAt || undefined,
+        scheduledAt: resolvedScheduledAt,
+        isSpecificDate: scheduleSpecificDate,
         applicationId: applicationId || null,
         contactId,
       }),
@@ -72,7 +93,9 @@ export function DashboardCallUpQuickAdd({
     }
 
     setTitle("");
-    setScheduledAt("");
+    setScheduleSpecificDate(Boolean(initialScheduledAt));
+    setScheduledWeek(initialDate ? formatWeekInputValue(initialDate) : "");
+    setScheduledAt(initialDate ? formatDateTimeInputValue(initialDate) : "");
     setApplicationId("");
     setContactId("");
     onClose();
@@ -93,12 +116,32 @@ export function DashboardCallUpQuickAdd({
             required
           />
 
-          <input
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
+          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={scheduleSpecificDate}
+              onChange={(event) =>
+                setScheduleSpecificDate(event.target.checked)
+              }
+            />
+            Schedule for specific date
+          </label>
+
+          {scheduleSpecificDate ? (
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+          ) : (
+            <input
+              type="week"
+              value={scheduledWeek}
+              onChange={(e) => setScheduledWeek(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+          )}
 
           <select
             value={contactId}

@@ -55,6 +55,7 @@ export async function POST(req: Request) {
       title: body.title,
       description: body.description,
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
+      isSpecificDate: Boolean(body.isSpecificDate),
       applicationId: body.applicationId || null,
       userId: user.id,
     },

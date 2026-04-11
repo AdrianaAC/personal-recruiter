@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { SpecificDateIndicator } from "@/components/ui/specific-date-indicator";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
 
 type RecentCallUp = {
@@ -10,6 +11,7 @@ type RecentCallUp = {
   title: string;
   notes: string | null;
   scheduledAt: string | Date | null;
+  isSpecificDate?: boolean;
   updatedAt?: string | Date;
   application: {
     id: string;
@@ -361,6 +363,11 @@ export function RecentCallUpsSection({
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_auto_auto] lg:items-center lg:gap-4">
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-slate-900">
+                    {callUp.isSpecificDate ? (
+                      <span className="mr-2 inline-flex align-middle">
+                        <SpecificDateIndicator className="h-3.5 w-3.5 text-sky-500" />
+                      </span>
+                    ) : null}
                     {callUp.title}
                   </h3>
 

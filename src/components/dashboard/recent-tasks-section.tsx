@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  formatDateInputValue,
+  formatWeekInputValue,
+  getFridayFromWeekInput,
+} from "@/lib/scheduling";
+import { SpecificDateIndicator } from "@/components/ui/specific-date-indicator";
 import { DeleteConfirmModal } from "./delete-confirm-modal";
 import { DashboardTaskQuickAdd } from "./dashboard-task-quick-add";
 
@@ -11,6 +17,7 @@ type RecentTask = {
   title: string;
   description: string | null;
   dueDate: string | Date | null;
+  isSpecificDate?: boolean;
   updatedAt?: string | Date;
   application: {
     id: string;
@@ -23,6 +30,8 @@ type TaskFormState = {
   title: string;
   description: string;
   dueDate: string;
+  dueWeek: string;
+  scheduleSpecificDate: boolean;
   applicationId: string;
 };
 
@@ -50,13 +59,6 @@ type RecentTasksSectionProps = {
   }[];
 };
 
-const initialTaskFormState: TaskFormState = {
-  title: "",
-  description: "",
-  dueDate: "",
-  applicationId: "",
-};
-
 function formatDate(value: string | Date | null) {
   if (!value) {
     return "No date";
@@ -65,13 +67,35 @@ function formatDate(value: string | Date | null) {
   return new Date(value).toLocaleDateString();
 }
 
-function toDateInputValue(value: string | Date | null) {
-  if (!value) {
+function buildTaskFormState(task?: {
+  title?: string;
+  description?: string | null;
+  dueDate?: string | Date | null;
+  isSpecificDate?: boolean;
+  applicationId?: string | null;
+}): TaskFormState {
+  const date = task?.dueDate ? new Date(task.dueDate) : null;
+
+  return {
+    title: task?.title ?? "",
+    description: task?.description ?? "",
+    dueDate: date ? formatDateInputValue(date) : "",
+    dueWeek: date ? formatWeekInputValue(date) : "",
+    scheduleSpecificDate: task?.isSpecificDate ?? Boolean(date),
+    applicationId: task?.applicationId ?? "",
+  };
+}
+
+function resolveTaskDueDate(form: TaskFormState) {
+  if (form.scheduleSpecificDate) {
+    return form.dueDate || "";
+  }
+
+  if (!form.dueWeek) {
     return "";
   }
 
-  const date = new Date(value);
-  return date.toISOString().split("T")[0];
+  return getFridayFromWeekInput(form.dueWeek)?.toISOString() ?? "";
 }
 
 function sortTasksByUpdatedAt(taskList: RecentTask[]) {
@@ -211,7 +235,7 @@ export function RecentTasksSection({
     id: string;
     title: string;
   } | null>(null);
-  const [editForm, setEditForm] = useState<TaskFormState>(initialTaskFormState);
+  const [editForm, setEditForm] = useState<TaskFormState>(buildTaskFormState());
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [copyingTaskId, setCopyingTaskId] = useState<string | null>(null);
@@ -363,17 +387,20 @@ export function RecentTasksSection({
 
   function openEditTask(task: RecentTask) {
     setEditingTaskId(task.id);
-    setEditForm({
-      title: task.title,
-      description: task.description ?? "",
-      dueDate: toDateInputValue(task.dueDate),
-      applicationId: task.application?.id ?? "",
-    });
+    setEditForm(
+      buildTaskFormState({
+        title: task.title,
+        description: task.description ?? "",
+        dueDate: task.dueDate,
+        isSpecificDate: task.isSpecificDate,
+        applicationId: task.application?.id ?? "",
+      }),
+    );
   }
 
   function closeEditTask() {
     setEditingTaskId(null);
-    setEditForm(initialTaskFormState);
+    setEditForm(buildTaskFormState());
   }
 
   async function handleSaveEditTask() {
@@ -389,7 +416,13 @@ export function RecentTasksSection({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          title: editForm.title,
+          description: editForm.description,
+          dueDate: resolveTaskDueDate(editForm),
+          isSpecificDate: editForm.scheduleSpecificDate,
+          applicationId: editForm.applicationId,
+        }),
       });
 
       if (!res.ok) {
@@ -407,6 +440,7 @@ export function RecentTasksSection({
                   title: updatedTask.title,
                   description: updatedTask.description,
                   dueDate: updatedTask.dueDate,
+                  isSpecificDate: updatedTask.isSpecificDate,
                   updatedAt: updatedTask.updatedAt,
                   application:
                     addTaskApplications.find(
@@ -535,6 +569,11 @@ export function RecentTasksSection({
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_auto_auto] lg:items-center lg:gap-4">
                 <div className="min-w-0">
                   <h3 className="text-base font-semibold text-slate-900">
+                    {task.isSpecificDate ? (
+                      <span className="mr-2 inline-flex align-middle">
+                        <SpecificDateIndicator className="h-3.5 w-3.5 text-amber-500" />
+                      </span>
+                    ) : null}
                     {task.title}
                   </h3>
 
@@ -778,19 +817,57 @@ export function RecentTasksSection({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700">
-                  Date
+                  Schedule
                 </label>
-                <input
-                  type="date"
-                  value={editForm.dueDate}
-                  onChange={(event) =>
-                    setEditForm((currentForm) => ({
-                      ...currentForm,
-                      dueDate: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
-                />
+                <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={editForm.scheduleSpecificDate}
+                    onChange={(event) =>
+                      setEditForm((currentForm) => ({
+                        ...currentForm,
+                        scheduleSpecificDate: event.target.checked,
+                      }))
+                    }
+                  />
+                  Schedule for specific date
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  {editForm.scheduleSpecificDate ? "Date" : "Week"}
+                </label>
+                {editForm.scheduleSpecificDate ? (
+                  <input
+                    type="date"
+                    value={editForm.dueDate}
+                    onChange={(event) =>
+                      setEditForm((currentForm) => ({
+                        ...currentForm,
+                        dueDate: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                  />
+                ) : (
+                  <input
+                    type="week"
+                    value={editForm.dueWeek}
+                    onChange={(event) =>
+                      setEditForm((currentForm) => ({
+                        ...currentForm,
+                        dueWeek: event.target.value,
+                      }))
+                    }
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-500"
+                  />
+                )}
+                <p className="text-xs text-slate-500">
+                  {!editForm.scheduleSpecificDate && editForm.dueWeek
+                    ? "Week-based tasks are placed on Friday of the selected week."
+                    : "Use a specific day when timing matters, or plan it by week number."}
+                </p>
               </div>
 
               <div className="space-y-2">

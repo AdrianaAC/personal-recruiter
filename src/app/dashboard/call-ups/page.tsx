@@ -27,6 +27,7 @@ export default async function CallUpsPage() {
       title: true,
       notes: true,
       scheduledAt: true,
+      isSpecificDate: true,
       status: true,
       updatedAt: true,
       contact: {

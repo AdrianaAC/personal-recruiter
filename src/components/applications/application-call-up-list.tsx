@@ -1,8 +1,11 @@
+import { SpecificDateIndicator } from "@/components/ui/specific-date-indicator";
+
 type CallUpItem = {
   id: string;
   title: string;
   notes: string | null;
   scheduledAt: string | Date | null;
+  isSpecificDate?: boolean;
   status: "PLANNED" | "DONE" | "MISSED";
   contact: {
     id: string;
@@ -78,6 +81,11 @@ export function ApplicationCallUpList({
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-base font-semibold text-gray-900">
+                        {callUp.isSpecificDate ? (
+                          <span className="mr-2 inline-flex align-middle">
+                            <SpecificDateIndicator className="h-3.5 w-3.5 text-sky-500" />
+                          </span>
+                        ) : null}
                         {callUp.title}
                       </h3>
 

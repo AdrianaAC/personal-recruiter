@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  formatDateInputValue,
+  formatWeekInputValue,
+  getFridayFromWeekInput,
+} from "@/lib/scheduling";
 
 type ApplicationOption = {
   id: string;
@@ -13,17 +18,28 @@ type Props = {
   open: boolean;
   onClose: () => void;
   applications: ApplicationOption[];
+  initialDueDate?: string | null;
 };
 
 export function DashboardTaskQuickAdd({
   open,
   onClose,
   applications,
+  initialDueDate,
 }: Props) {
   const router = useRouter();
+  const initialDate = initialDueDate ? new Date(initialDueDate) : null;
 
   const [title, setTitle] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [scheduleSpecificDate, setScheduleSpecificDate] = useState(
+    Boolean(initialDueDate),
+  );
+  const [dueWeek, setDueWeek] = useState(
+    initialDate ? formatWeekInputValue(initialDate) : "",
+  );
+  const [dueDate, setDueDate] = useState(
+    initialDate ? formatDateInputValue(initialDate) : "",
+  );
   const [applicationId, setApplicationId] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -33,6 +49,10 @@ export function DashboardTaskQuickAdd({
     e.preventDefault();
     setLoading(true);
 
+    const resolvedDueDate = scheduleSpecificDate
+      ? dueDate || undefined
+      : getFridayFromWeekInput(dueWeek)?.toISOString();
+
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: {
@@ -40,7 +60,8 @@ export function DashboardTaskQuickAdd({
       },
       body: JSON.stringify({
         title,
-        dueDate: dueDate || undefined,
+        dueDate: resolvedDueDate,
+        isSpecificDate: scheduleSpecificDate,
         applicationId: applicationId || null,
       }),
     });
@@ -55,6 +76,8 @@ export function DashboardTaskQuickAdd({
     }
 
     setTitle("");
+    setScheduleSpecificDate(Boolean(initialDueDate));
+    setDueWeek(initialDate ? formatWeekInputValue(initialDate) : "");
     setDueDate("");
     setApplicationId("");
     onClose();
@@ -75,12 +98,32 @@ export function DashboardTaskQuickAdd({
             required
           />
 
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
+          <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={scheduleSpecificDate}
+              onChange={(event) =>
+                setScheduleSpecificDate(event.target.checked)
+              }
+            />
+            Schedule for specific date
+          </label>
+
+          {scheduleSpecificDate ? (
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+          ) : (
+            <input
+              type="week"
+              value={dueWeek}
+              onChange={(e) => setDueWeek(e.target.value)}
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            />
+          )}
 
           <select
             value={applicationId}

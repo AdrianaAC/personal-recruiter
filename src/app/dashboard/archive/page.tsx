@@ -53,6 +53,7 @@ export default async function ArchivePage() {
         title: true,
         description: true,
         dueDate: true,
+        isSpecificDate: true,
         updatedAt: true,
         application: {
           select: {
@@ -78,6 +79,7 @@ export default async function ArchivePage() {
         title: true,
         notes: true,
         scheduledAt: true,
+        isSpecificDate: true,
         updatedAt: true,
         application: {
           select: {

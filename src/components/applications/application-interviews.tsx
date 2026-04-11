@@ -34,6 +34,22 @@ type InterviewFormValues = {
   notes: string;
 };
 
+type InterviewResponse = {
+  id: string;
+  applicationId: string;
+  type?: string | null;
+  stageName?: string | null;
+  scheduledAt?: string | Date | null;
+  durationMinutes?: number | null;
+  interviewerName?: string | null;
+  interviewerRole?: string | null;
+  locationOrLink?: string | null;
+  outcome?: string | null;
+  notes?: string | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+};
+
 type ApplicationInterviewsProps = {
   applicationId: string;
   initialInterviews: InterviewItem[];
@@ -82,7 +98,7 @@ function formatDateTime(value: string | Date | null | undefined) {
   }).format(date);
 }
 
-function normalizeInterviewForState(data: any): InterviewItem {
+function normalizeInterviewForState(data: InterviewResponse): InterviewItem {
   return {
     id: data.id,
     applicationId: data.applicationId,
