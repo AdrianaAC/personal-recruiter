@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  getAppliedAtForWorkflow,
+  syncApplicationWorkflowTask,
+} from "@/lib/application-workflow";
 import { createApplicationSchema } from "@/lib/validations/application";
+
+function revalidateApplicationPaths(id: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
+  revalidatePath(`/dashboard/applications/${id}`);
+}
 
 export async function GET() {
   try {
@@ -79,6 +92,7 @@ export async function POST(request: Request) {
           jobDescription: data.jobDescription || null,
           status: data.status,
           priority: data.priority,
+          appliedAt: getAppliedAtForWorkflow(null, data.status),
         },
         select: {
           id: true,
@@ -140,8 +154,12 @@ export async function POST(request: Request) {
         });
       }
 
+      await syncApplicationWorkflowTask(tx, createdApplication.id);
+
       return createdApplication;
     });
+
+    revalidateApplicationPaths(application.id);
 
     return NextResponse.json(application, { status: 201 });
   } catch (error) {

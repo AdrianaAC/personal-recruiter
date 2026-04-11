@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { createNoteSchema } from "@/lib/validations/note";
 
@@ -8,6 +10,14 @@ type RouteContext = {
     noteId: string;
   }>;
 };
+
+function revalidateApplicationPaths(id: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
+  revalidatePath("/dashboard/applications");
+  revalidatePath(`/dashboard/applications/${id}`);
+}
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
@@ -28,6 +38,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -50,22 +61,30 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const data = parsed.data;
 
-    const updatedNote = await prisma.note.update({
-      where: {
-        id: noteId,
-      },
-      data: {
-        title: data.title || null,
-        content: data.content,
-      },
-      select: {
-        id: true,
-        title: true,
-        content: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const updatedNote = await prisma.$transaction(async (tx) => {
+      const note = await tx.note.update({
+        where: {
+          id: noteId,
+        },
+        data: {
+          title: data.title || null,
+          content: data.content,
+        },
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await syncApplicationWorkflowTask(tx, existingNote.applicationId);
+
+      return note;
     });
+
+    revalidateApplicationPaths(existingNote.applicationId);
 
     return NextResponse.json(updatedNote, { status: 200 });
   } catch (error) {
@@ -97,6 +116,7 @@ export async function DELETE(_: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -104,11 +124,17 @@ export async function DELETE(_: Request, context: RouteContext) {
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
 
-    await prisma.note.delete({
-      where: {
-        id: noteId,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.note.delete({
+        where: {
+          id: noteId,
+        },
+      });
+
+      await syncApplicationWorkflowTask(tx, existingNote.applicationId);
     });
+
+    revalidateApplicationPaths(existingNote.applicationId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

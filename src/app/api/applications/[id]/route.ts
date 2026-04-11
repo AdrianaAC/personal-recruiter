@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import {
+  getAppliedAtForWorkflow,
+  syncApplicationWorkflowTask,
+} from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { createApplicationSchema } from "@/lib/validations/application";
 
@@ -14,6 +18,8 @@ function revalidateApplicationPaths(id: string) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/archive");
   revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
   revalidatePath(`/dashboard/applications/${id}`);
   revalidatePath(`/dashboard/applications/${id}/edit`);
 }
@@ -87,6 +93,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        appliedAt: true,
       },
     });
 
@@ -112,32 +119,39 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const data = parsed.data;
 
-    const updatedApplication = await prisma.jobApplication.update({
-      where: {
-        id,
-      },
-      data: {
-        companyName: data.companyName,
-        roleTitle: data.roleTitle,
-        location: data.location || null,
-        workMode: data.workMode ?? null,
-        jobUrl: data.jobUrl || null,
-        jobDescription: data.jobDescription || null,
-        status: data.status,
-        priority: data.priority,
-      },
-      select: {
-        id: true,
-        companyName: true,
-        roleTitle: true,
-        location: true,
-        workMode: true,
-        status: true,
-        priority: true,
-        jobUrl: true,
-        jobDescription: true,
-        updatedAt: true,
-      },
+    const updatedApplication = await prisma.$transaction(async (tx) => {
+      const application = await tx.jobApplication.update({
+        where: {
+          id,
+        },
+        data: {
+          companyName: data.companyName,
+          roleTitle: data.roleTitle,
+          location: data.location || null,
+          workMode: data.workMode ?? null,
+          jobUrl: data.jobUrl || null,
+          jobDescription: data.jobDescription || null,
+          status: data.status,
+          priority: data.priority,
+          appliedAt: getAppliedAtForWorkflow(existingApplication.appliedAt, data.status),
+        },
+        select: {
+          id: true,
+          companyName: true,
+          roleTitle: true,
+          location: true,
+          workMode: true,
+          status: true,
+          priority: true,
+          jobUrl: true,
+          jobDescription: true,
+          updatedAt: true,
+        },
+      });
+
+      await syncApplicationWorkflowTask(tx, id);
+
+      return application;
     });
 
     revalidateApplicationPaths(id);

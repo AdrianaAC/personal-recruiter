@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { createInterviewSchema } from "@/lib/validations/interview";
 
@@ -8,6 +10,14 @@ type RouteContext = {
     interviewId: string;
   }>;
 };
+
+function revalidateApplicationPaths(id: string) {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
+  revalidatePath("/dashboard/applications");
+  revalidatePath(`/dashboard/applications/${id}`);
+}
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
@@ -28,6 +38,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -53,36 +64,44 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const data = parsed.data;
 
-    const updatedInterview = await prisma.interview.update({
-      where: {
-        id: interviewId,
-      },
-      data: {
-        type: data.type,
-        stageName: data.stageName || null,
-        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
-        durationMinutes: data.durationMinutes ?? null,
-        interviewerName: data.interviewerName || null,
-        interviewerRole: data.interviewerRole || null,
-        locationOrLink: data.locationOrLink || null,
-        outcome: data.outcome ?? null,
-        notes: data.notes || null,
-      },
-      select: {
-        id: true,
-        type: true,
-        stageName: true,
-        scheduledAt: true,
-        durationMinutes: true,
-        interviewerName: true,
-        interviewerRole: true,
-        locationOrLink: true,
-        outcome: true,
-        notes: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+    const updatedInterview = await prisma.$transaction(async (tx) => {
+      const interview = await tx.interview.update({
+        where: {
+          id: interviewId,
+        },
+        data: {
+          type: data.type,
+          stageName: data.stageName || null,
+          scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
+          durationMinutes: data.durationMinutes ?? null,
+          interviewerName: data.interviewerName || null,
+          interviewerRole: data.interviewerRole || null,
+          locationOrLink: data.locationOrLink || null,
+          outcome: data.outcome ?? null,
+          notes: data.notes || null,
+        },
+        select: {
+          id: true,
+          type: true,
+          stageName: true,
+          scheduledAt: true,
+          durationMinutes: true,
+          interviewerName: true,
+          interviewerRole: true,
+          locationOrLink: true,
+          outcome: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      await syncApplicationWorkflowTask(tx, existingInterview.applicationId);
+
+      return interview;
     });
+
+    revalidateApplicationPaths(existingInterview.applicationId);
 
     return NextResponse.json(updatedInterview, { status: 200 });
   } catch (error) {
@@ -114,6 +133,7 @@ export async function DELETE(_: Request, context: RouteContext) {
       },
       select: {
         id: true,
+        applicationId: true,
       },
     });
 
@@ -124,11 +144,17 @@ export async function DELETE(_: Request, context: RouteContext) {
       );
     }
 
-    await prisma.interview.delete({
-      where: {
-        id: interviewId,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.interview.delete({
+        where: {
+          id: interviewId,
+        },
+      });
+
+      await syncApplicationWorkflowTask(tx, existingInterview.applicationId);
     });
+
+    revalidateApplicationPaths(existingInterview.applicationId);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

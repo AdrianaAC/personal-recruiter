@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 
 type RouteContext = {
@@ -14,6 +15,8 @@ function revalidateApplicationPaths(id: string) {
   revalidatePath("/dashboard/archive");
   revalidatePath("/dashboard/applications");
   revalidatePath("/dashboard/applications/archive");
+  revalidatePath("/dashboard/tasks");
+  revalidatePath("/dashboard/tasks/archive");
   revalidatePath(`/dashboard/applications/${id}`);
   revalidatePath(`/dashboard/applications/${id}/edit`);
 }
@@ -53,16 +56,20 @@ export async function POST(_: Request, context: RouteContext) {
       );
     }
 
-    await prisma.jobApplication.update({
-      where: {
-        id,
-      },
-      data: {
-        archivedAt: new Date(),
-      },
-      select: {
-        id: true,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.jobApplication.update({
+        where: {
+          id,
+        },
+        data: {
+          archivedAt: new Date(),
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await syncApplicationWorkflowTask(tx, id);
     });
 
     revalidateApplicationPaths(id);

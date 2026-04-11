@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   interviewOutcomeValues,
   interviewTypeValues,
@@ -34,6 +35,22 @@ type InterviewFormValues = {
   notes: string;
 };
 
+type InterviewResponse = {
+  id: string;
+  applicationId?: string;
+  type?: string | null;
+  stageName?: string | null;
+  scheduledAt?: string | Date | null;
+  durationMinutes?: number | null;
+  interviewerName?: string | null;
+  interviewerRole?: string | null;
+  locationOrLink?: string | null;
+  outcome?: string | null;
+  notes?: string | null;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+};
+
 type ApplicationInterviewsProps = {
   applicationId: string;
   initialInterviews: InterviewItem[];
@@ -50,6 +67,18 @@ const emptyForm: InterviewFormValues = {
   outcome: "",
   notes: "",
 };
+
+function sortInterviewsByScheduledAt(interviewList: InterviewItem[]) {
+  return [...interviewList].sort((a, b) => {
+    const aTime = a.scheduledAt
+      ? new Date(a.scheduledAt).getTime()
+      : Number.MAX_SAFE_INTEGER;
+    const bTime = b.scheduledAt
+      ? new Date(b.scheduledAt).getTime()
+      : Number.MAX_SAFE_INTEGER;
+    return aTime - bTime;
+  });
+}
 
 function toLocalDateTimeInput(value: string | Date | null | undefined) {
   if (!value) return "";
@@ -82,10 +111,13 @@ function formatDateTime(value: string | Date | null | undefined) {
   }).format(date);
 }
 
-function normalizeInterviewForState(data: any): InterviewItem {
+function normalizeInterviewForState(
+  data: InterviewResponse,
+  fallbackApplicationId: string,
+): InterviewItem {
   return {
     id: data.id,
-    applicationId: data.applicationId,
+    applicationId: data.applicationId ?? fallbackApplicationId,
     type: data.type ?? "",
     stageName: data.stageName ?? "",
     scheduledAt: data.scheduledAt ?? null,
@@ -162,16 +194,9 @@ export function ApplicationInterviews({
   applicationId,
   initialInterviews,
 }: ApplicationInterviewsProps) {
-  const [interviews, setInterviews] = useState<InterviewItem[]>(
-    [...initialInterviews].sort((a, b) => {
-      const aTime = a.scheduledAt
-        ? new Date(a.scheduledAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-      const bTime = b.scheduledAt
-        ? new Date(b.scheduledAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-      return aTime - bTime;
-    }),
+  const router = useRouter();
+  const [interviews, setInterviews] = useState<InterviewItem[]>(() =>
+    sortInterviewsByScheduledAt(initialInterviews),
   );
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -185,16 +210,12 @@ export function ApplicationInterviews({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setInterviews(sortInterviewsByScheduledAt(initialInterviews));
+  }, [initialInterviews]);
+
   const sortedInterviews = useMemo(() => {
-    return [...interviews].sort((a, b) => {
-      const aTime = a.scheduledAt
-        ? new Date(a.scheduledAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-      const bTime = b.scheduledAt
-        ? new Date(b.scheduledAt).getTime()
-        : Number.MAX_SAFE_INTEGER;
-      return aTime - bTime;
-    });
+    return sortInterviewsByScheduledAt(interviews);
   }, [interviews]);
 
   function handleCreateChange<K extends keyof InterviewFormValues>(
@@ -245,10 +266,11 @@ export function ApplicationInterviews({
         throw new Error(data?.error || "Failed to create interview.");
       }
 
-      const createdInterview = normalizeInterviewForState(data);
+      const createdInterview = normalizeInterviewForState(data, applicationId);
       setInterviews((prev) => [createdInterview, ...prev]);
       setCreateValues(emptyForm);
       setIsCreateOpen(false);
+      router.refresh();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to create interview.",
@@ -281,7 +303,7 @@ export function ApplicationInterviews({
         throw new Error(data?.error || "Failed to update interview.");
       }
 
-      const updatedInterview = normalizeInterviewForState(data);
+      const updatedInterview = normalizeInterviewForState(data, applicationId);
 
       setInterviews((prev) =>
         prev.map((item) => (item.id === interviewId ? updatedInterview : item)),
@@ -289,6 +311,7 @@ export function ApplicationInterviews({
 
       setEditingId(null);
       setEditValues(emptyForm);
+      router.refresh();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to update interview.",
@@ -320,6 +343,8 @@ export function ApplicationInterviews({
       if (editingId === interviewId) {
         cancelEditing();
       }
+
+      router.refresh();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to delete interview.",
