@@ -50,6 +50,8 @@ export default async function ArchivePage() {
       },
       select: {
         id: true,
+        origin: true,
+        snoozedUntil: true,
         title: true,
         description: true,
         dueDate: true,

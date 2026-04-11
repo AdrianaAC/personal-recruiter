@@ -4,6 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 
 type Task = {
   id: string;
+  origin: string;
+  snoozedUntil: string | Date | null;
   title: string;
   description: string | null;
   dueDate: string | Date | null;
@@ -55,6 +57,36 @@ function toDateInputValue(value: string | Date | null) {
   return date.toISOString().split("T")[0];
 }
 
+function formatTaskOrigin(origin: string) {
+  return origin
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getTaskOriginClasses(origin: string) {
+  switch (origin) {
+    case "auto_followup":
+      return "bg-sky-100 text-sky-900";
+    case "auto_prep":
+      return "bg-indigo-100 text-indigo-900";
+    case "auto_deadline":
+      return "bg-rose-100 text-rose-900";
+    case "auto_review":
+      return "bg-emerald-100 text-emerald-900";
+    default:
+      return "bg-white text-gray-700";
+  }
+}
+
+function formatSnoozeLabel(value: string | Date | null) {
+  if (!value) {
+    return null;
+  }
+
+  return `Snoozed until ${new Date(value).toLocaleDateString()}`;
+}
+
 export function ApplicationTasks({
   applicationId,
   initialTasks,
@@ -68,6 +100,7 @@ export function ApplicationTasks({
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [snoozingTaskId, setSnoozingTaskId] = useState<string | null>(null);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -214,6 +247,9 @@ export function ApplicationTasks({
             title: task.title,
             description: task.description ?? "",
             dueDate: toDateInputValue(task.dueDate),
+            snoozedUntil: task.snoozedUntil
+              ? toDateInputValue(task.snoozedUntil)
+              : "",
             completed: !task.completed,
           }),
         },
@@ -235,6 +271,69 @@ export function ApplicationTasks({
       console.error(err);
       setError("Something went wrong while updating task status.");
     }
+  }
+
+  function buildSnoozeDate(weeks: number) {
+    const date = new Date();
+    date.setDate(date.getDate() + weeks * 7);
+    return date.toISOString().split("T")[0];
+  }
+
+  async function handleSnoozeTask(task: Task, snoozedUntil: string) {
+    setError(null);
+    setSnoozingTaskId(task.id);
+
+    try {
+      const response = await fetch(
+        `/api/applications/${applicationId}/tasks/${task.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: task.title,
+            description: task.description ?? "",
+            dueDate: snoozedUntil,
+            snoozedUntil,
+          }),
+        },
+      );
+
+      const result = await readJsonSafely(response);
+
+      if (!response.ok) {
+        setError(result?.error || `Failed to snooze task (${response.status}).`);
+        return;
+      }
+
+      setTasks((prev) =>
+        sortTasks(
+          prev.map((currentTask) =>
+            currentTask.id === task.id ? result : currentTask,
+          ),
+        ),
+      );
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong while snoozing the task.");
+    } finally {
+      setSnoozingTaskId(null);
+    }
+  }
+
+  async function handleCustomSnooze(task: Task) {
+    const defaultDate = toDateInputValue(task.dueDate) || buildSnoozeDate(1);
+    const customDate = window.prompt(
+      "Enter a snooze date in YYYY-MM-DD format.",
+      defaultDate,
+    );
+
+    if (!customDate) {
+      return;
+    }
+
+    await handleSnoozeTask(task, customDate);
   }
 
   return (
@@ -450,6 +549,12 @@ export function ApplicationTasks({
                               {task.title}
                             </h3>
 
+                            <span
+                              className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${getTaskOriginClasses(task.origin)}`}
+                            >
+                              {formatTaskOrigin(task.origin)}
+                            </span>
+
                             {task.completed ? (
                               <span className="rounded-full bg-white px-2 py-1 text-xs text-green-700">
                                 Completed
@@ -467,7 +572,49 @@ export function ApplicationTasks({
                           </p>
                         </div>
 
+                        {task.origin === "auto_followup" &&
+                        task.snoozedUntil ? (
+                          <p className="mt-2 text-xs font-medium text-sky-700">
+                            {formatSnoozeLabel(task.snoozedUntil)}
+                          </p>
+                        ) : null}
+
                         <div className="flex flex-wrap gap-2">
+                          {task.origin === "auto_followup" ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleSnoozeTask(task, buildSnoozeDate(1))
+                                }
+                                disabled={snoozingTaskId === task.id}
+                                className="rounded-lg border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                1w
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void handleSnoozeTask(task, buildSnoozeDate(2))
+                                }
+                                disabled={snoozingTaskId === task.id}
+                                className="rounded-lg border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                2w
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => void handleCustomSnooze(task)}
+                                disabled={snoozingTaskId === task.id}
+                                className="rounded-lg border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Custom
+                              </button>
+                            </>
+                          ) : null}
+
                           <button
                             type="button"
                             onClick={() => handleToggleCompleted(task)}

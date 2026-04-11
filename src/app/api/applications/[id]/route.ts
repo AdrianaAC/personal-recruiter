@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import {
   getAppliedAtForWorkflow,
+  getOfferReceivedAtForWorkflow,
   syncApplicationWorkflowTask,
 } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
@@ -33,6 +34,27 @@ export async function GET(_: Request, context: RouteContext) {
     }
 
     const { id } = await context.params;
+
+    const accessCheck = await prisma.jobApplication.findFirst({
+      where: {
+        id,
+        userId: session.user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!accessCheck) {
+      return NextResponse.json(
+        { error: "Application not found" },
+        { status: 404 },
+      );
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await syncApplicationWorkflowTask(tx, id);
+    });
 
     const application = await prisma.jobApplication.findFirst({
       where: {
@@ -94,6 +116,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       select: {
         id: true,
         appliedAt: true,
+        status: true,
+        offerReceivedAt: true,
       },
     });
 
@@ -131,9 +155,17 @@ export async function PATCH(request: Request, context: RouteContext) {
           workMode: data.workMode ?? null,
           jobUrl: data.jobUrl || null,
           jobDescription: data.jobDescription || null,
+          offerExpiresAt: data.offerExpiresAt
+            ? new Date(data.offerExpiresAt)
+            : null,
           status: data.status,
           priority: data.priority,
           appliedAt: getAppliedAtForWorkflow(existingApplication.appliedAt, data.status),
+          offerReceivedAt: getOfferReceivedAtForWorkflow(
+            existingApplication.offerReceivedAt,
+            existingApplication.status,
+            data.status,
+          ),
         },
         select: {
           id: true,
@@ -145,6 +177,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           priority: true,
           jobUrl: true,
           jobDescription: true,
+          offerExpiresAt: true,
           updatedAt: true,
         },
       });

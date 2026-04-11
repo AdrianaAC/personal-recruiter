@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       description: body.description,
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
       applicationId: body.applicationId || null,
+      origin: "manual",
       userId: user.id,
     },
   });

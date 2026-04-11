@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { syncApplicationWorkflowTask } from "@/lib/application-workflow";
 import { prisma } from "@/lib/prisma";
 import { createTaskSchema } from "@/lib/validations/task";
 
@@ -36,6 +37,10 @@ export async function GET(_: Request, context: RouteContext) {
       );
     }
 
+    await prisma.$transaction(async (tx) => {
+      await syncApplicationWorkflowTask(tx, applicationId);
+    });
+
     const tasks = await prisma.task.findMany({
       where: {
         applicationId,
@@ -46,6 +51,8 @@ export async function GET(_: Request, context: RouteContext) {
       ],
       select: {
         id: true,
+        origin: true,
+        snoozedUntil: true,
         title: true,
         description: true,
         dueDate: true,
@@ -112,12 +119,15 @@ export async function POST(request: Request, context: RouteContext) {
       data: {
         userId: session.user.id,
         applicationId,
+        origin: "manual",
         title: data.title,
         description: data.description || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
       },
       select: {
         id: true,
+        origin: true,
+        snoozedUntil: true,
         title: true,
         description: true,
         dueDate: true,

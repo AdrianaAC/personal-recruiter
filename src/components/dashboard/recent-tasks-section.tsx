@@ -8,6 +8,8 @@ import { DashboardTaskQuickAdd } from "./dashboard-task-quick-add";
 
 type RecentTask = {
   id: string;
+  origin: string;
+  snoozedUntil: string | Date | null;
   title: string;
   description: string | null;
   dueDate: string | Date | null;
@@ -65,6 +67,14 @@ function formatDate(value: string | Date | null) {
   return new Date(value).toLocaleDateString();
 }
 
+function formatSnoozeLabel(value: string | Date | null) {
+  if (!value) {
+    return null;
+  }
+
+  return `Snoozed until ${new Date(value).toLocaleDateString()}`;
+}
+
 function toDateInputValue(value: string | Date | null) {
   if (!value) {
     return "";
@@ -81,6 +91,28 @@ function sortTasksByUpdatedAt(taskList: RecentTask[]) {
 
     return bTime - aTime;
   });
+}
+
+function formatTaskOrigin(origin: string) {
+  return origin
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getTaskOriginClasses(origin: string) {
+  switch (origin) {
+    case "auto_followup":
+      return "bg-sky-100 text-sky-900 ring-sky-300";
+    case "auto_prep":
+      return "bg-indigo-100 text-indigo-900 ring-indigo-300";
+    case "auto_deadline":
+      return "bg-rose-100 text-rose-900 ring-rose-300";
+    case "auto_review":
+      return "bg-emerald-100 text-emerald-900 ring-emerald-300";
+    default:
+      return "bg-slate-100 text-slate-700 ring-slate-300";
+  }
 }
 
 function formatRelativeDate(value: string | Date | null | undefined) {
@@ -215,6 +247,7 @@ export function RecentTasksSection({
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const [copyingTaskId, setCopyingTaskId] = useState<string | null>(null);
+  const [snoozingTaskId, setSnoozingTaskId] = useState<string | null>(null);
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const itemsPerPage = 5;
 
@@ -361,6 +394,75 @@ export function RecentTasksSection({
     }
   }
 
+  function buildSnoozeDate(weeks: number) {
+    const date = new Date();
+    date.setDate(date.getDate() + weeks * 7);
+    return date.toISOString().split("T")[0];
+  }
+
+  async function handleSnoozeTask(task: RecentTask, snoozedUntil: string) {
+    setSnoozingTaskId(task.id);
+
+    try {
+      const res = await fetch(`/api/tasks/${task.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: task.title,
+          description: task.description ?? "",
+          dueDate: snoozedUntil,
+          snoozedUntil,
+          applicationId: task.application?.id ?? "",
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to snooze task.");
+      }
+
+      const updatedTask = await res.json();
+
+      setTaskItems((currentTasks) =>
+        sortTasksByUpdatedAt(
+          currentTasks.map((currentTask) =>
+            currentTask.id === task.id
+              ? {
+                  ...currentTask,
+                  dueDate: updatedTask.dueDate,
+                  snoozedUntil: updatedTask.snoozedUntil,
+                  updatedAt: updatedTask.updatedAt,
+                }
+              : currentTask,
+          ),
+        ),
+      );
+
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch {
+      alert("Failed to snooze task.");
+    } finally {
+      setSnoozingTaskId(null);
+    }
+  }
+
+  async function handleCustomSnooze(task: RecentTask) {
+    const defaultDate = toDateInputValue(task.dueDate) || buildSnoozeDate(1);
+    const customDate = window.prompt(
+      "Enter a snooze date in YYYY-MM-DD format.",
+      defaultDate,
+    );
+
+    if (!customDate) {
+      return;
+    }
+
+    await handleSnoozeTask(task, customDate);
+  }
+
   function openEditTask(task: RecentTask) {
     setEditingTaskId(task.id);
     setEditForm({
@@ -404,6 +506,8 @@ export function RecentTasksSection({
             task.id === editingTaskId
               ? {
                   ...task,
+                  origin: updatedTask.origin,
+                  snoozedUntil: updatedTask.snoozedUntil,
                   title: updatedTask.title,
                   description: updatedTask.description,
                   dueDate: updatedTask.dueDate,
@@ -538,6 +642,14 @@ export function RecentTasksSection({
                     {task.title}
                   </h3>
 
+                  <div className="mt-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ring-1 ${getTaskOriginClasses(task.origin)}`}
+                    >
+                      {formatTaskOrigin(task.origin)}
+                    </span>
+                  </div>
+
                   <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
                     <span>{formatDate(task.dueDate)}</span>
                     <span
@@ -548,6 +660,12 @@ export function RecentTasksSection({
                     </span>
                     <span>{task.description ?? "No description"}</span>
                   </div>
+
+                  {task.origin === "auto_followup" && task.snoozedUntil ? (
+                    <p className="mt-2 text-xs font-medium text-sky-700">
+                      {formatSnoozeLabel(task.snoozedUntil)}
+                    </p>
+                  ) : null}
 
                   <p
                     className="mt-3 truncate whitespace-nowrap text-sm text-slate-500"
@@ -629,6 +747,46 @@ export function RecentTasksSection({
 
                   {itemActionMode === "complete" && showDeleteAction ? (
                     <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm">
+                      {task.origin === "auto_followup" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSnoozeTask(task, buildSnoozeDate(1));
+                            }}
+                            disabled={snoozingTaskId === task.id}
+                            className="inline-flex h-8 items-center justify-center rounded-full border border-transparent bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            1w
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSnoozeTask(task, buildSnoozeDate(2));
+                            }}
+                            disabled={snoozingTaskId === task.id}
+                            className="inline-flex h-8 items-center justify-center rounded-full border border-transparent bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            2w
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleCustomSnooze(task);
+                            }}
+                            disabled={snoozingTaskId === task.id}
+                            className="inline-flex h-8 items-center justify-center rounded-full border border-transparent bg-white px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            Custom
+                          </button>
+                        </>
+                      ) : null}
+
                       <TaskCheckbox
                         taskId={task.id}
                         onAction={handleDeleteTask}

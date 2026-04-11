@@ -65,6 +65,12 @@ export const createApplicationSchema = z.object({
     .optional()
     .or(z.literal("")),
 
+  offerExpiresAt: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
   status: z.enum(applicationStatusValues).default("SAVED"),
 
   priority: z.enum(priorityValues).default("MEDIUM"),

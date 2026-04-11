@@ -40,6 +40,8 @@ export async function POST(_: Request, context: RouteContext) {
         description: true,
         dueDate: true,
         applicationId: true,
+        origin: true,
+        snoozedUntil: true,
       },
     });
 
@@ -51,12 +53,15 @@ export async function POST(_: Request, context: RouteContext) {
       data: {
         userId: session.user.id,
         applicationId: task.applicationId,
+        origin: "manual",
         title: task.title,
         description: task.description,
         dueDate: task.dueDate,
       },
       select: {
         id: true,
+        origin: true,
+        snoozedUntil: true,
         title: true,
         description: true,
         dueDate: true,

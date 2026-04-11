@@ -17,6 +17,8 @@ export const createTaskSchema = z.object({
   dueDate: z.string().optional().nullable().or(z.literal("")),
 
   completed: z.boolean().optional(),
+
+  snoozedUntil: z.string().optional().nullable().or(z.literal("")),
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;

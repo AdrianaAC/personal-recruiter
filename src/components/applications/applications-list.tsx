@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { ApplicationStalenessLevel } from "@/lib/application-staleness";
 
 export type ApplicationListItem = {
   id: string;
@@ -16,6 +17,10 @@ export type ApplicationListItem = {
   jobUrl?: string | null;
   createdAt: string | Date;
   updatedAt?: string | Date;
+  staleLevel?: ApplicationStalenessLevel | null;
+  staleLabel?: string | null;
+  staleDescription?: string | null;
+  staleWeeks?: number | null;
 };
 
 type ApplicationsListProps = {
@@ -104,6 +109,48 @@ function getStatusAccentClass(status: string) {
       return "bg-slate-400";
     default:
       return "bg-gray-300";
+  }
+}
+
+function getStaleTagClass(level: ApplicationStalenessLevel) {
+  switch (level) {
+    case "warning":
+      return "bg-amber-50 text-amber-800 ring-1 ring-amber-200";
+    case "stale":
+      return "bg-rose-50 text-rose-800 ring-1 ring-rose-200";
+    case "archive":
+      return "bg-slate-900 text-white ring-1 ring-slate-800";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+}
+
+function getApplicationCardClass(
+  application: ApplicationListItem,
+  emphasizeDashboard: boolean,
+) {
+  if (emphasizeDashboard) {
+    switch (application.staleLevel) {
+      case "warning":
+        return "relative overflow-hidden rounded-2xl border border-amber-300 bg-gradient-to-r from-white via-amber-50/40 to-white p-5 shadow-md transition hover:border-amber-400 hover:shadow-lg";
+      case "stale":
+        return "relative overflow-hidden rounded-2xl border border-rose-300 bg-gradient-to-r from-white via-rose-50/35 to-white p-5 shadow-md transition hover:border-rose-400 hover:shadow-lg";
+      case "archive":
+        return "relative overflow-hidden rounded-2xl border border-slate-300 bg-gradient-to-r from-white via-slate-100/70 to-white p-5 shadow-md transition hover:border-slate-400 hover:shadow-lg";
+      default:
+        return "relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-white via-emerald-50/30 to-white p-5 shadow-md transition hover:border-emerald-300 hover:shadow-lg";
+    }
+  }
+
+  switch (application.staleLevel) {
+    case "warning":
+      return "rounded-xl border border-amber-200 bg-white p-4 shadow-md transition hover:border-amber-300 hover:shadow-lg";
+    case "stale":
+      return "rounded-xl border border-rose-200 bg-white p-4 shadow-md transition hover:border-rose-300 hover:shadow-lg";
+    case "archive":
+      return "rounded-xl border border-slate-300 bg-white p-4 shadow-md transition hover:border-slate-400 hover:shadow-lg";
+    default:
+      return "rounded-xl border border-gray-200 bg-white p-4 shadow-md transition hover:border-gray-300 hover:shadow-lg";
   }
 }
 
@@ -279,6 +326,8 @@ function matchesApplication(
     application.updatedAt
       ? new Date(application.updatedAt).toLocaleDateString()
       : "",
+    application.staleLabel ?? "",
+    application.staleDescription ?? "",
   ];
 
   return searchableFields.some((field) =>
@@ -526,11 +575,7 @@ export function ApplicationsList({
         return (
           <div
             key={application.id}
-            className={`${
-              emphasizeDashboard
-                ? "relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-white via-emerald-50/30 to-white p-5 shadow-md transition hover:border-emerald-300 hover:shadow-lg"
-                : "rounded-xl border border-gray-200 bg-white p-4 shadow-md transition hover:border-gray-300 hover:shadow-lg"
-            }`}
+            className={getApplicationCardClass(application, emphasizeDashboard)}
           >
             {emphasizeDashboard ? (
               <div
@@ -578,6 +623,18 @@ export function ApplicationsList({
                 >
                   Priority: {formatLabel(application.priority)}
                 </span>
+
+                {application.staleLevel && application.staleLabel ? (
+                  <span
+                    className={`rounded-full px-2 py-1 font-medium ${getStaleTagClass(application.staleLevel)}`}
+                    title={application.staleDescription ?? undefined}
+                  >
+                    {application.staleLabel}
+                    {application.staleWeeks
+                      ? ` · ${application.staleWeeks}w quiet`
+                      : ""}
+                  </span>
+                ) : null}
 
                 <span
                   className="rounded-full bg-white/80 px-2 py-1 text-slate-600 ring-1 ring-slate-200"

@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import type { ApplicationStalenessLevel } from "@/lib/application-staleness";
 import {
   DashboardAiFeedbackToggle,
   type DashboardVisibilityState,
 } from "@/components/dashboard/dashboard-ai-feedback-toggle";
 import { DashboardActivityTimeline } from "@/components/dashboard/dashboard-activity-timeline";
 import { DashboardQuickActions } from "@/components/dashboard/dashboard-quick-actions";
+import { DashboardWeeklySummary as DashboardWeeklySummarySection } from "@/components/dashboard/dashboard-weekly-summary";
+import { DashboardWorkflowSettings } from "@/components/dashboard/dashboard-workflow-settings";
 import { RecentApplicationsSection } from "@/components/dashboard/recent-applications-section";
 import { RecentCallUpsSection } from "@/components/dashboard/recent-callups-section";
 import { RecentContactsSection } from "@/components/dashboard/recent-contacts-section";
 import { RecentTasksSection } from "@/components/dashboard/recent-tasks-section";
+import type { DashboardWeeklySummary } from "@/lib/dashboard-weekly-summary";
 
 type ApplicationOption = {
   id: string;
@@ -89,13 +93,21 @@ type DashboardPageSectionsProps = {
     priority: string;
     createdAt: string | Date;
     updatedAt: string | Date;
+    staleLevel?: ApplicationStalenessLevel | null;
+    staleLabel?: string | null;
+    staleDescription?: string | null;
+    staleWeeks?: number | null;
   }>;
   quickActionApplications: ApplicationOption[];
   quickActionContacts: QuickActionContactOption[];
   dashboardStats: DashboardStat[];
   attentionCards: AttentionCard[];
+  weeklySummary: DashboardWeeklySummary;
+  thankYouReminderEnabled: boolean;
   recentTasks: Array<{
     id: string;
+    origin: string;
+    snoozedUntil: string | Date | null;
     title: string;
     description: string | null;
     dueDate: string | Date | null;
@@ -244,6 +256,8 @@ export function DashboardPageSections({
   quickActionContacts,
   dashboardStats,
   attentionCards,
+  weeklySummary,
+  thankYouReminderEnabled,
   recentTasks,
   recentFollowUps,
   recentContacts,
@@ -319,20 +333,27 @@ export function DashboardPageSections({
               </div>
             </div>
 
-            <div className="flex justify-start lg:justify-end">
-              <DashboardAiFeedbackToggle
-                toggles={visibility}
-                onToggle={(key) =>
-                  setVisibility((current) => ({
-                    ...current,
-                    [key]: !current[key],
-                  }))
-                }
+            <div className="flex w-full flex-col gap-3 lg:w-auto lg:items-end">
+              <DashboardWorkflowSettings
+                thankYouReminderEnabled={thankYouReminderEnabled}
               />
+              <div className="flex justify-start lg:justify-end">
+                <DashboardAiFeedbackToggle
+                  toggles={visibility}
+                  onToggle={(key) =>
+                    setVisibility((current) => ({
+                      ...current,
+                      [key]: !current[key],
+                    }))
+                  }
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
+
+      <DashboardWeeklySummarySection summary={weeklySummary} />
 
       {visibility.utilities ? (
         <>

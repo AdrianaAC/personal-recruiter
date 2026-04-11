@@ -13,6 +13,10 @@ export const createNoteSchema = z.object({
     .trim()
     .min(1, "Content is required")
     .max(5000, "Content must be 5000 characters or less"),
+
+  assessmentDueDate: z.string().optional().nullable().or(z.literal("")),
+
+  assessmentSubmitted: z.boolean().optional(),
 });
 
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
