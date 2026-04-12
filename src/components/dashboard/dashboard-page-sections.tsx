@@ -32,7 +32,9 @@ type DashboardStat = {
   subtitle: string;
   classes: string;
   iconClasses: string;
-  iconKey: "briefcase" | "spark" | "send" | "phone";
+  labelClasses?: string;
+  subtitleClasses?: string;
+  iconKey: "briefcase" | "spark" | "send" | "phone" | "user";
 };
 
 type AttentionCard = {
@@ -93,6 +95,8 @@ type DashboardPageSectionsProps = {
   quickActionApplications: ApplicationOption[];
   quickActionContacts: QuickActionContactOption[];
   dashboardStats: DashboardStat[];
+  weeklyTodoLabel: string;
+  weeklyTodoCards: DashboardStat[];
   attentionCards: AttentionCard[];
   calendarEvents: Array<{
     id: string;
@@ -231,6 +235,26 @@ function PhoneIcon() {
   );
 }
 
+function UserIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="h-5 w-5"
+    >
+      <circle cx="12" cy="8" r="3.25" />
+      <path
+        d="M5 19a7 7 0 0 1 14 0"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function renderStatIcon(iconKey: DashboardStat["iconKey"]) {
   switch (iconKey) {
     case "briefcase":
@@ -241,9 +265,45 @@ function renderStatIcon(iconKey: DashboardStat["iconKey"]) {
       return <SendIcon />;
     case "phone":
       return <PhoneIcon />;
+    case "user":
+      return <UserIcon />;
     default:
       return null;
   }
+}
+
+function MetricCard({ metric }: { metric: DashboardStat }) {
+  return (
+    <div className={`rounded-2xl border p-5 shadow-sm ${metric.classes}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p
+            className={`text-sm font-medium ${
+              metric.labelClasses ?? "text-slate-600"
+            }`}
+          >
+            {metric.label}
+          </p>
+          <p className="mt-3 text-3xl font-semibold text-slate-950">
+            {metric.value}
+          </p>
+          <p
+            className={`mt-2 text-xs ${
+              metric.subtitleClasses ?? "text-slate-500"
+            }`}
+          >
+            {metric.subtitle}
+          </p>
+        </div>
+
+        <div
+          className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${metric.iconClasses}`}
+        >
+          {renderStatIcon(metric.iconKey)}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function DashboardPageSections({
@@ -254,6 +314,8 @@ export function DashboardPageSections({
   quickActionApplications,
   quickActionContacts,
   dashboardStats,
+  weeklyTodoLabel,
+  weeklyTodoCards,
   attentionCards,
   calendarEvents,
   recentTasks,
@@ -334,38 +396,43 @@ export function DashboardPageSections({
       </section>
 
       {visibility.utilities ? (
-        <>
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {dashboardStats.map((stat) => (
-              <div
-                key={stat.label}
-                className={`rounded-2xl border p-5 shadow-sm ${stat.classes}`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600">
-                      {stat.label}
-                    </p>
-                    <p className="mt-3 text-3xl font-semibold text-slate-950">
-                      {stat.value}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-500">
-                      {stat.subtitle}
-                    </p>
-                  </div>
+        <section className="rounded-3xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-50 p-5 shadow-sm">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Summary</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                The core metrics shaping your search right now.
+              </p>
 
-                  <div
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${stat.iconClasses}`}
-                  >
-                    {renderStatIcon(stat.iconKey)}
-                  </div>
-                </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {dashboardStats.map((stat) => (
+                  <MetricCard key={stat.label} metric={stat} />
+                ))}
               </div>
-            ))}
-          </section>
+            </div>
 
-          {attentionCards.length > 0 ? (
-            <section className="rounded-3xl border border-slate-300 bg-gradient-to-br from-slate-100 via-white to-slate-50 p-5 shadow-sm">
+            <div className="border-t border-slate-200 pt-6">
+              <h2 className="text-lg font-semibold text-slate-950">
+                Weekly To Do - {weeklyTodoLabel}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                What is already scheduled to happen during this week.
+              </p>
+
+              {weeklyTodoCards.length > 0 ? (
+                <div className="mt-5 grid gap-4 xl:grid-cols-3">
+                  {weeklyTodoCards.map((card) => (
+                    <MetricCard key={card.label} metric={card} />
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-6 text-sm text-slate-600">
+                  Nothing to do this week.
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-slate-200 pt-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-950">
@@ -381,38 +448,44 @@ export function DashboardPageSections({
                 </span>
               </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                {attentionCards.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`rounded-2xl border p-4 shadow-sm ${item.classes}`}
-                  >
-                    <p
-                      className={`text-xs font-semibold uppercase tracking-[0.12em] ${
-                        item.labelClasses ?? "text-slate-500"
-                      }`}
+              {attentionCards.length > 0 ? (
+                <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                  {attentionCards.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`rounded-2xl border p-4 shadow-sm ${item.classes}`}
                     >
-                      {item.label}
-                    </p>
-                    <h3 className="mt-2 text-base font-semibold text-slate-950">
-                      {item.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {item.description}
-                    </p>
-                    <p
-                      className={`mt-3 text-xs font-medium ${
-                        item.metaClasses ?? "text-slate-500"
-                      }`}
-                    >
-                      {item.meta}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </>
+                      <p
+                        className={`text-xs font-semibold uppercase tracking-[0.12em] ${
+                          item.labelClasses ?? "text-slate-500"
+                        }`}
+                      >
+                        {item.label}
+                      </p>
+                      <h3 className="mt-2 text-base font-semibold text-slate-950">
+                        {item.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {item.description}
+                      </p>
+                      <p
+                        className={`mt-3 text-xs font-medium ${
+                          item.metaClasses ?? "text-slate-500"
+                        }`}
+                      >
+                        {item.meta}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-6 text-sm text-slate-600">
+                  Nothing urgent right now. Your board is looking tidy.
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       ) : null}
 
       {visibility.applications ? (

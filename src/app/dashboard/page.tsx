@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { DashboardPageSections } from "@/components/dashboard/dashboard-page-sections";
+import { getSundayWeekNumber, startOfSundayWeek } from "@/lib/scheduling";
 
 const RECENT_SECTION_LIMIT = 25;
 
@@ -11,6 +12,15 @@ function formatLabel(value: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function isWithinRange(value: string | Date | null | undefined, start: Date, end: Date) {
+  if (!value) {
+    return false;
+  }
+
+  const date = typeof value === "string" ? new Date(value) : value;
+  return date.getTime() >= start.getTime() && date.getTime() <= end.getTime();
 }
 
 export default async function DashboardPage() {
@@ -448,23 +458,47 @@ export default async function DashboardPage() {
   const heroDescription =
     "Use the board below to spot what needs attention, keep momentum visible, and make the next move obvious.";
 
+  const contactsCount = contacts.length;
+  const currentWeekStart = startOfSundayWeek(new Date());
+  const currentWeekEnd = new Date(currentWeekStart);
+  currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+  currentWeekEnd.setHours(23, 59, 59, 999);
+  const weeklyTodoLabel = `Week ${getSundayWeekNumber(currentWeekStart)}`;
+
+  const tasksThisWeekCount = scheduledCalendarTasks.filter((task) =>
+    isWithinRange(task.dueDate, currentWeekStart, currentWeekEnd),
+  ).length;
+  const followUpsThisWeekCount = scheduledCalendarFollowUps.filter((callUp) =>
+    isWithinRange(callUp.scheduledAt, currentWeekStart, currentWeekEnd),
+  ).length;
+  const applicationsWithEventsThisWeekCount = new Set([
+    ...scheduledCalendarTasks
+      .filter((task) => isWithinRange(task.dueDate, currentWeekStart, currentWeekEnd))
+      .map((task) => task.application?.id)
+      .filter((applicationId): applicationId is string => Boolean(applicationId)),
+    ...scheduledCalendarInterviews
+      .filter((interview) =>
+        isWithinRange(interview.scheduledAt, currentWeekStart, currentWeekEnd),
+      )
+      .map((interview) => interview.application.id),
+    ...scheduledCalendarFollowUps
+      .filter((callUp) =>
+        isWithinRange(callUp.scheduledAt, currentWeekStart, currentWeekEnd),
+      )
+      .map((callUp) => callUp.application?.id)
+      .filter((applicationId): applicationId is string => Boolean(applicationId)),
+  ]).size;
+
   const dashboardStats = [
-    {
-      label: "Total Applications",
-      value: totalApplicationsCount,
-      subtitle: "Every opportunity in your tracker.",
-      classes:
-        "border-slate-300 bg-gradient-to-br from-slate-200 via-white to-white",
-      iconClasses: "bg-slate-950 text-white",
-      iconKey: "briefcase" as const,
-    },
     {
       label: "In Process",
       value: pipelineApplicationsCount,
       subtitle: "Active applications beyond the saved stage.",
       classes:
-        "border-slate-300 bg-gradient-to-br from-slate-100 via-white to-white",
-      iconClasses: "bg-slate-900 text-white",
+        "border-emerald-200 bg-gradient-to-br from-emerald-100 via-white to-white",
+      iconClasses: "bg-emerald-500 text-white",
+      labelClasses: "text-emerald-900/80",
+      subtitleClasses: "text-emerald-900/70",
       iconKey: "spark" as const,
     },
     {
@@ -472,8 +506,10 @@ export default async function DashboardPage() {
       value: openTasksCount,
       subtitle: "Open actions across your workflow.",
       classes:
-        "border-slate-300 bg-gradient-to-br from-slate-100 via-white to-white",
-      iconClasses: "bg-slate-900 text-white",
+        "border-amber-200 bg-gradient-to-br from-amber-100 via-white to-white",
+      iconClasses: "bg-amber-500 text-white",
+      labelClasses: "text-amber-900/80",
+      subtitleClasses: "text-amber-900/70",
       iconKey: "send" as const,
     },
     {
@@ -481,11 +517,60 @@ export default async function DashboardPage() {
       value: callUpsCount,
       subtitle: "Contacts tied to active opportunities.",
       classes:
-        "border-slate-300 bg-gradient-to-br from-slate-100 via-white to-white",
-      iconClasses: "bg-slate-900 text-white",
+        "border-sky-200 bg-gradient-to-br from-sky-100 via-white to-white",
+      iconClasses: "bg-sky-500 text-white",
+      labelClasses: "text-sky-900/80",
+      subtitleClasses: "text-sky-900/70",
       iconKey: "phone" as const,
     },
+    {
+      label: "Contacts",
+      value: contactsCount,
+      subtitle: "People tracked across your network.",
+      classes:
+        "border-rose-200 bg-gradient-to-br from-rose-100 via-white to-white",
+      iconClasses: "bg-rose-500 text-white",
+      labelClasses: "text-rose-900/80",
+      subtitleClasses: "text-rose-900/70",
+      iconKey: "user" as const,
+    },
   ];
+
+  const weeklyTodoCards = [
+    {
+      label: "Applications With Events",
+      value: applicationsWithEventsThisWeekCount,
+      subtitle: "Applications that already have activity scheduled this week.",
+      classes:
+        "border-emerald-200 bg-gradient-to-br from-emerald-100 via-white to-white",
+      iconClasses: "bg-emerald-500 text-white",
+      labelClasses: "text-emerald-900/80",
+      subtitleClasses: "text-emerald-900/70",
+      iconKey: "briefcase" as const,
+    },
+    {
+      label: "Tasks This Week",
+      value: tasksThisWeekCount,
+      subtitle: "Scheduled task work landing in the current week.",
+      classes:
+        "border-amber-200 bg-gradient-to-br from-amber-100 via-white to-white",
+      iconClasses: "bg-amber-500 text-white",
+      labelClasses: "text-amber-900/80",
+      subtitleClasses: "text-amber-900/70",
+      iconKey: "send" as const,
+    },
+    {
+      label: "FollowUps This Week",
+      value: followUpsThisWeekCount,
+      subtitle: "Planned follow-ups that need outreach this week.",
+      classes:
+        "border-sky-200 bg-gradient-to-br from-sky-100 via-white to-white",
+      iconClasses: "bg-sky-500 text-white",
+      labelClasses: "text-sky-900/80",
+      subtitleClasses: "text-sky-900/70",
+      iconKey: "phone" as const,
+    },
+  ].filter((card) => card.value > 0);
 
   const allTimelineItems = [
     ...recentApplicationActivity.map((application) => ({
@@ -665,6 +750,8 @@ export default async function DashboardPage() {
         jobTitle: contact.jobTitle,
       }))}
       dashboardStats={dashboardStats}
+      weeklyTodoLabel={weeklyTodoLabel}
+      weeklyTodoCards={weeklyTodoCards}
       attentionCards={attentionCards}
       calendarEvents={calendarEvents}
       recentTasks={recentTasks.map((task) => ({
